@@ -40,6 +40,14 @@ const envSchema = z.object({
   TOLERANCE: z.coerce.number().int().min(1).default(3),
   PEERS_MAX: z.coerce.number().int().min(1).max(1024).default(64),
 
+  /**
+   * Where bitcoind's log comes from: the systemd journal of LOG_UNITS, or
+   * Core's own debug.log (a bitcoind in a container has no unit and no
+   * journal entry; the file in its data directory is all there is).
+   */
+  LOG_SOURCE: z.enum(['journal', 'file']).default('journal'),
+  /** With LOG_SOURCE=file: the file. Defaults to <BITCOIN_DATA_DIR>/debug.log */
+  BITCOIN_DEBUG_LOG: z.string().optional(),
   /** Comma-separated systemd units whose journal fills the log panel */
   LOG_UNITS: z.string().default('bitcoind'),
   LOG_LINES: z.coerce.number().int().min(5).max(500).default(150),

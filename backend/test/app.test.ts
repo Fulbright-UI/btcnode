@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import type { StatusSource } from '../src/app.js';
 import { hashPassword } from '../src/auth/password.js';
-import { AgentClient } from '../src/control/agentClient.js';
+import { AgentClient, AgentUnitStatus } from '../src/control/agentClient.js';
 import { createEnv } from './helpers/env.js';
 import type { TestEnv } from './helpers/env.js';
 import { fakeAgent } from './helpers/fakeAgent.js';
@@ -18,10 +18,11 @@ beforeAll(async () => {
   env = await createEnv();
   await env.poller.runStatus();
   await env.poller.runLog();
-  agent = await fakeAgent();
+  agent = await fakeAgent({ electrs: 'missing' }); // a host without an Electrum server
   app = await buildApp({
     source: env.poller,
     agent: new AgentClient(agent.path),
+    agentActions: () => new AgentUnitStatus(new AgentClient(agent.path)).actions(),
     adminPasswordHash: await hashPassword(password),
     sessionKey: randomBytes(32),
     secureCookie: false,
@@ -118,7 +119,12 @@ describe('control', () => {
     const jar = { 'btcnode.session': cookie!.value };
 
     const session = await app.inject({ method: 'GET', url: '/api/auth/session', cookies: jar });
-    expect(session.json()).toEqual({ authenticated: true, controlAvailable: true });
+    // in the contract's fixed order, without what the host lacks (electrs)
+    expect(session.json()).toEqual({
+      authenticated: true,
+      controlAvailable: true,
+      actions: ['restart-bitcoind', 'reboot', 'poweroff'],
+    });
 
     const ok = await app.inject({
       method: 'POST',

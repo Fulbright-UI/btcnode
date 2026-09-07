@@ -49,6 +49,23 @@ certificate, writes `deploy/.env`, opens the port for the home network only,
 and starts the containers on **https://<pi>/** (443, with 80 redirecting).
 If something else already serves those ports, pass `--web-port 8443
 --http-port 8080`.
+It looks for `bitcoin.conf` in the usual places (`/mnt/bitcoin/bitcoin`,
+`/var/lib/bitcoind`, `/home/bitcoin/.bitcoin`, `/data/bitcoin`); elsewhere,
+run `sudo BITCOIN_DATA_DIR=/path/to/datadir bash scripts/install.sh`.
+
+### bitcoind in Docker
+
+A node that runs as a container is found by its name or image (`bitcoin`,
+`btc`; `sudo BITCOIND_CONTAINER=name bash scripts/install.sh` if it is called
+something else). The data directory comes from the container's bind mounts,
+the RPC account goes into that `bitcoin.conf`, and the container is restarted
+instead of a unit — also later from the control panel, through the agent.
+Two things the container must provide: its RPC port published on localhost
+(`-p 127.0.0.1:8332:8332` or `network_mode: host`; the installer checks and
+says so), and a group-readable `debug.log` in the data directory, which then
+replaces the journal as the log source (`LOG_SOURCE=file`). An Electrum
+server in a container (`electrs`, `fulcrum`, `electrumx`) is picked up the
+same way; without one the page says so.
 
 Language: the page follows the browser, `?lang=de` / `?lang=en` overrides,
 the footer remembers the choice.

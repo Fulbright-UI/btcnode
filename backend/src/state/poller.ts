@@ -125,7 +125,7 @@ export class Poller {
       const sections = await collectLog(
         journal,
         config.logUnits,
-        config.unitDirs,
+        config.LOG_SOURCE === 'file' ? null : config.unitDirs,
         config.LOG_LINES,
       );
       this.logText = renderLogText(sections);

@@ -1,3 +1,4 @@
+import { CONTROL_ACTIONS } from '@btcnode/shared';
 import type { ControlAction, ControlResult } from '@btcnode/shared';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -6,6 +7,8 @@ import { ApiError, api } from '@/api/client';
 export const useAuthStore = defineStore('auth', () => {
   const authenticated = ref(false);
   const controlAvailable = ref(false);
+  /** What the host offers; everything until the agent says otherwise */
+  const actions = ref<ControlAction[]>([...CONTROL_ACTIONS]);
   const loaded = ref(false);
 
   async function load() {
@@ -13,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
       const s = await api.session();
       authenticated.value = s.authenticated;
       controlAvailable.value = s.controlAvailable;
+      if (s.actions) actions.value = s.actions;
     } catch {
       authenticated.value = false;
       controlAvailable.value = false;
@@ -26,6 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const s = await api.login(password);
       authenticated.value = s.authenticated;
+      if (s.actions) actions.value = s.actions;
       return null;
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return 'wrong';
@@ -51,5 +56,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { authenticated, controlAvailable, loaded, load, login, logout, run };
+  return { authenticated, controlAvailable, actions, loaded, load, login, logout, run };
 });

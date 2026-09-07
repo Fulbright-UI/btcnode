@@ -15,6 +15,13 @@ export const JOURNAL_LINE =
   /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:?\d{2})\s+\S+\s+[\w.@-]+(?:\[\d+\])?:\s*(.*)$/;
 
 /**
+ * Core's own debug.log: 2026-09-07T18:17:51Z message — always UTC, no host,
+ * no unit. That is the source for a bitcoind in a container (LOG_SOURCE=file).
+ * With -logtimemicros the seconds carry a fraction, which is skipped.
+ */
+export const CORE_LINE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?Z\s+(.*)$/;
+
+/**
  *   v26–v29  Saw new cmpctblock header hash=… peer=311            (no height)
  *   v30–v31  Saw new cmpctblock header hash=… height=… peer=311
  *   master   Saw new cmpctblock header hash=… height=… peer=311[, peeraddr=…]
@@ -45,10 +52,16 @@ export type ParsedLine =
   | { kind: 'other'; at: number };
 
 export function parseTimestamp(line: string, fallback: number): number {
+  let iso: string;
   const m = JOURNAL_LINE.exec(line);
-  if (!m) return fallback;
-  // "+0000" → "+00:00": Date.parse wants the ISO form
-  const iso = m[1]!.replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+  if (m) {
+    // "+0000" → "+00:00": Date.parse wants the ISO form
+    iso = m[1]!.replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+  } else {
+    const c = CORE_LINE.exec(line);
+    if (!c) return fallback;
+    iso = c[1]! + 'Z';
+  }
   const t = Date.parse(iso);
   return Number.isNaN(t) ? fallback : t / 1000;
 }
@@ -76,6 +89,9 @@ const LOG_PREFIX =
 
 export function shortenLogLine(line: string): string {
   const m = LOG_PREFIX.exec(line);
-  if (!m) return line;
-  return `${m[1]}  ${line.slice(m[0].length)}`;
+  if (m) return `${m[1]}  ${line.slice(m[0].length)}`;
+  // a debug.log line: keep the clock time, drop date and Z
+  const c = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}:\d{2})(?:\.\d+)?Z\s+/.exec(line);
+  if (c) return `${c[1]}  ${line.slice(c[0].length)}`;
+  return line;
 }

@@ -1,7 +1,7 @@
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import session from '@fastify/session';
-import type { Chronicle, StatusSnapshot } from '@btcnode/shared';
+import type { Chronicle, ControlAction, StatusSnapshot } from '@btcnode/shared';
 import { controlRequestSchema, loginRequestSchema } from '@btcnode/shared';
 import Fastify, { LogController } from 'fastify';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -16,6 +16,8 @@ export interface StatusSource {
 }
 
 export interface AppOptions {
+  /** Resolves the actions the agent offers; null when there is no agent */
+  agentActions?: (() => Promise<ControlAction[]>) | null;
   source: StatusSource;
   agent: AgentClient | null;
   adminPasswordHash: string | null;
@@ -103,9 +105,13 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     }
   };
 
+  const actions = async () =>
+    controlEnabled && opts.agentActions ? await opts.agentActions() : undefined;
+
   app.get('/api/auth/session', async (req) => ({
     authenticated: isAdmin(req),
     controlAvailable: controlEnabled,
+    actions: await actions(),
   }));
 
   app.post(
@@ -127,7 +133,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       req.session.admin = true;
       req.session.issuedAt = Math.floor(Date.now() / 1000);
       req.log.info({ ip: req.ip }, 'admin logged in');
-      return { authenticated: true, controlAvailable: true };
+      return { authenticated: true, controlAvailable: true, actions: await actions() };
     },
   );
 

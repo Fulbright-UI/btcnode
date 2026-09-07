@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
 import { buildApp } from '../src/app.js';
 import { hashPassword } from '../src/auth/password.js';
-import { AgentClient } from '../src/control/agentClient.js';
+import { AgentClient, AgentUnitStatus } from '../src/control/agentClient.js';
 import { createEnv } from './helpers/env.js';
 import { fakeAgent } from './helpers/fakeAgent.js';
 import type { Scenario } from './helpers/mockNode.js';
@@ -41,9 +41,12 @@ env.poller.start();
 // The control panel against a fake agent; password "mock-password".
 const agent = await fakeAgent();
 
+const agentClient = new AgentClient(agent.path);
+const agentStatus = new AgentUnitStatus(agentClient);
 const app = await buildApp({
   source: env.poller,
-  agent: new AgentClient(agent.path),
+  agent: agentClient,
+  agentActions: () => agentStatus.actions(),
   adminPasswordHash: await hashPassword('mock-password'),
   sessionKey: randomBytes(32),
   secureCookie: false,

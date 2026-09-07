@@ -30,5 +30,11 @@ export const sessionInfoSchema = z.object({
   authenticated: z.boolean(),
   /** Whether a control agent is reachable at all — without one the panel stays hidden */
   controlAvailable: z.boolean(),
+  /**
+   * The actions the agent can actually perform here: a node without an
+   * Electrum server has no "restart electrs", whether unit or container.
+   * Absent while the agent is not configured.
+   */
+  actions: z.array(controlActionSchema).optional(),
 });
 export type SessionInfo = z.infer<typeof sessionInfoSchema>;

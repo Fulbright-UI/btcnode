@@ -14,6 +14,7 @@ import { AgentClient, AgentUnitStatus } from './control/agentClient.js';
 import { BlockTraffic } from './history/blockTraffic.js';
 import { TemperatureHistory } from './history/temperature.js';
 import { AnnouncementTracker } from './journal/announcements.js';
+import { DebugLogReader } from './journal/debugLog.js';
 import { JournalctlReader } from './journal/journalctl.js';
 import { BitcoinRpcClient } from './rpc/client.js';
 import { Poller } from './state/poller.js';
@@ -38,13 +39,14 @@ async function main() {
     password: config.rpcPassword,
     timeoutSeconds: config.BITCOIN_RPC_TIMEOUT,
   });
-  const journal = new JournalctlReader(config.JOURNAL_DIR);
+  const journal =
+    config.LOG_SOURCE === 'file'
+      ? new DebugLogReader(config.BITCOIN_DEBUG_LOG ?? join(config.BITCOIN_DATA_DIR, 'debug.log'))
+      : new JournalctlReader(config.JOURNAL_DIR);
   const agent = config.AGENT_SOCKET ? new AgentClient(config.AGENT_SOCKET) : null;
-  const units = agent
-    ? new AgentUnitStatus(agent)
-    : config.JOURNAL_DIR
-      ? new NoUnitStatus()
-      : new SystemctlUnitStatus();
+  const agentStatus = agent ? new AgentUnitStatus(agent) : null;
+  const units =
+    agentStatus ?? (config.JOURNAL_DIR ? new NoUnitStatus() : new SystemctlUnitStatus());
 
   const poller = new Poller({
     config,
@@ -80,6 +82,7 @@ async function main() {
   const app = await buildApp({
     source: poller,
     agent,
+    agentActions: agentStatus ? () => agentStatus.actions() : null,
     adminPasswordHash: config.adminPasswordHash,
     sessionKey: config.sessionKey,
     secureCookie: config.SESSION_SECURE_COOKIE,

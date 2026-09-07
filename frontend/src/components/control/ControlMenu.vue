@@ -30,8 +30,14 @@ const LABEL: Record<ControlAction, string> = {
   poweroff: 'control.poweroff',
 };
 const DANGER: ReadonlySet<ControlAction> = new Set(['reboot', 'poweroff']);
+// In the fixed order of CONTROL_ACTIONS, but only what the host can do:
+// a node without an Electrum server gets no "restart electrs" button.
 const actions = computed(() =>
-  CONTROL_ACTIONS.map((a) => ({ id: a, label: t(LABEL[a]), danger: DANGER.has(a) })),
+  CONTROL_ACTIONS.filter((a) => auth.actions.includes(a)).map((a) => ({
+    id: a,
+    label: t(LABEL[a]),
+    danger: DANGER.has(a),
+  })),
 );
 
 function toggle() {

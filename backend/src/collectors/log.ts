@@ -15,12 +15,13 @@ export interface LogSection {
 export async function collectLog(
   journal: JournalReader,
   units: string[],
-  unitDirs: string[],
+  /** null: the source is a file, there is no unit whose absence would mean anything */
+  unitDirs: string[] | null,
   maxLines: number,
 ): Promise<LogSection[]> {
   const sections: LogSection[] = [];
   for (const unit of units) {
-    if (!(await unitExists(unit, unitDirs))) {
+    if (unitDirs && !(await unitExists(unit, unitDirs))) {
       sections.push({ unit, lines: [], problem: 'missingUnit' });
       continue;
     }

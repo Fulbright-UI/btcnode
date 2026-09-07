@@ -29,10 +29,13 @@ services:
       UPDATES_FILE: /var/lib/btcnode/updates.json
       # The host's unit files, mounted below — to tell "not installed" from "no access"
       SYSTEMD_UNIT_DIRS: /run/host/systemd/etc,/run/host/systemd/lib
-    # Host groups: systemd-journal to read the journal, btcnode for the agent socket.
+    # Host groups: systemd-journal to read the journal, btcnode for the agent
+    # socket, and — for a bitcoind in a container, whose debug.log is the log
+    # source — the group that owns the data directory (65534 = nogroup when unset).
     group_add:
       - '${JOURNAL_GID:?set JOURNAL_GID in .env}'
       - '${AGENT_GID:?set AGENT_GID in .env}'
+      - '${DATA_GID:-65534}'
     # /sys and /proc are visible inside a container anyway (temperature,
     # hwmon, CPU, memory, uptime are read from there); only these are mounted:
     volumes:
