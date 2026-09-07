@@ -1,11 +1,10 @@
 # Node setup scripts
 
-*[Deutsche Fassung](README.de.md)*
-
 Five shell scripts that turn a Raspberry Pi into a Bitcoin full node — disk,
-Bitcoin Core, Electrum server, Tor — and an optional sixth that does the Tor
-switch for you once the chain is up. No framework, no Docker, no image to
-flash — scripts you can read in an evening.
+Bitcoin Core, Electrum server, Tor — plus two optional ones: I2P as a second
+anonymous network, and a watchdog that does the Tor switch for you once the
+chain is up. No framework, no Docker, no image to flash — scripts you can
+read in an evening.
 
 **Read them before you run them.** Every one of them says at the top what it
 does and what it does not. One of them erases disks. That is exactly why they

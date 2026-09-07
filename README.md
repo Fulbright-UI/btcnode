@@ -46,9 +46,9 @@ The installer puts Docker in place if it is missing, installs the agent,
 creates a read-only RPC account in `bitcoin.conf` (or reuses the one an
 earlier dashboard had), asks for an admin password, makes a self-signed
 certificate, writes `deploy/.env`, opens the port for the home network only,
-and starts the containers. By default the page comes up on **https://…:8443**
-so it can run next to an existing dashboard; `scripts/replace-legacy-dashboard.sh`
-moves it to 443/80 and retires the old one.
+and starts the containers on **https://<pi>/** (443, with 80 redirecting).
+If something else already serves those ports, pass `--web-port 8443
+--http-port 8080`.
 
 Language: the page follows the browser, `?lang=de` / `?lang=en` overrides,
 the footer remembers the choice.

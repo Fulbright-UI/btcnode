@@ -14,10 +14,10 @@
 #
 # Repeatable: running it twice changes nothing that is already right.
 #
-# Usage:  sudo bash scripts/install.sh [--web-port 8443] [--http-port 8080] [--lan 192.168.0.0/16] [--yes]
+# Usage:  sudo bash scripts/install.sh [--web-port 443] [--http-port 80] [--lan 192.168.0.0/16] [--yes]
 #
-# 8443/8080 let it run next to an existing dashboard on 80. Once you are
-# happy, scripts/replace-legacy-dashboard.sh moves it to 443/80.
+# Pick other ports (say 8443/8080) if something else already serves 443/80
+# on this machine; the page then answers on https://…:8443.
 
 set -euo pipefail
 
@@ -25,8 +25,8 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY="$REPO/deploy"
 AGENT_LIB="/usr/local/lib/btcnode"
 UNIT_DIR="/etc/systemd/system"
-WEB_PORT=8443
-HTTP_PORT=8080
+WEB_PORT=443
+HTTP_PORT=80
 LAN=""
 ASSUME_YES=0
 RPC_METHODS="getblockchaininfo,getnetworkinfo,getmempoolinfo,uptime,getpeerinfo,getblockstats,getnetworkhashps,estimatesmartfee"
