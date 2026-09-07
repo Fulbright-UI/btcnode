@@ -53,7 +53,12 @@ It looks for `bitcoin.conf` in the usual places (`/mnt/bitcoin/bitcoin`,
 `/var/lib/bitcoind`, `/home/bitcoin/.bitcoin`, `/data/bitcoin`); elsewhere,
 run `sudo BITCOIN_DATA_DIR=/path/to/datadir bash scripts/install.sh`.
 
-### bitcoind in Docker
+### bitcoind in Docker, or started some other way
+
+The installer finds out how bitcoind runs: a systemd unit `bitcoind` (what
+`scripts/node-setup` builds), else a Docker container, else it settles for
+RPC and the data directory alone — the page then works, only the restart
+button is not offered and the log comes from `debug.log`.
 
 A node that runs as a container is found by its name or image (`bitcoin`,
 `btc`; `sudo BITCOIND_CONTAINER=name bash scripts/install.sh` if it is called

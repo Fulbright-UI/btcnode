@@ -95,6 +95,7 @@ find_container() {
 }
 AGENT_UNITS=""
 AGENT_CONTAINERS=""
+NODE_UNMANAGED=0
 BITCOIND_CONTAINER="${BITCOIND_CONTAINER:-}"
 if unit_present bitcoind; then
   ok "bitcoind: systemd unit"
@@ -108,7 +109,12 @@ else
     ok "bitcoind: container $BITCOIND_CONTAINER"
     AGENT_CONTAINERS="bitcoind=$BITCOIND_CONTAINER"
   else
-    fail "no bitcoind found — neither a systemd unit nor a running container (BITCOIND_CONTAINER=name if it has an unusual name)"
+    # Started by hand, by cron, by something we do not know: the page still
+    # works through RPC and the data directory, only the restart button is
+    # not offered and the log comes from debug.log if there is one.
+    NODE_UNMANAGED=1
+    note "no bitcoind unit and no container found — using RPC and the data directory only;"
+    note "the page will not offer a bitcoind restart (BITCOIND_CONTAINER=name if it is a container with an unusual name)"
   fi
 fi
 ELECTRS_CONTAINER=""
@@ -236,7 +242,9 @@ if [[ $RESTART_BITCOIND -eq 1 ]]; then
   else
     RESTART_CMD="systemctl restart bitcoind"
   fi
-  if ask "bitcoin.conf changed — restart bitcoind now? (a clean restart takes a minute)" n; then
+  if (( NODE_UNMANAGED == 1 )); then
+    note "restart bitcoind yourself, however you started it — the new RPC account works only after that"
+  elif ask "bitcoin.conf changed — restart bitcoind now? (a clean restart takes a minute)" n; then
     $RESTART_CMD >/dev/null && ok "bitcoind restarted"
   else
     note "restart bitcoind yourself before the dashboard can log in: sudo $RESTART_CMD"
@@ -251,6 +259,8 @@ if python3 -c "import socket,sys; s=socket.socket(); s.settimeout(3); sys.exit(0
   ok "RPC answers on 127.0.0.1:$RPC_PORT"
 elif [[ -n "$BITCOIND_CONTAINER" ]]; then
   fail "nothing listens on 127.0.0.1:$RPC_PORT — publish the container's RPC port on localhost (-p 127.0.0.1:$RPC_PORT:$RPC_PORT, or network_mode: host) and run again"
+elif (( NODE_UNMANAGED == 1 )); then
+  fail "nothing listens on 127.0.0.1:$RPC_PORT and I do not know how bitcoind runs here — start it, then run again"
 else
   note "nothing listens on 127.0.0.1:$RPC_PORT yet — fine if bitcoind is still starting"
 fi
@@ -323,7 +333,7 @@ ELECTRUM_PORT=50001
 # source, and the api container needs the group that may read it.
 LOG_SOURCE="journal"
 DATA_GID=""
-if [[ -n "$BITCOIND_CONTAINER" ]]; then
+if [[ -n "$BITCOIND_CONTAINER" || $NODE_UNMANAGED -eq 1 ]]; then
   LOG_SOURCE="file"
   DEBUG_LOG="$DATADIR/debug.log"
   if [[ -f "$DEBUG_LOG" ]]; then
