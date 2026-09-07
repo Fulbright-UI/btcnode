@@ -36,7 +36,9 @@
 }
 .probes {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 3px;
+  max-width: 40%;
 }
 .probe {
   width: 0.42rem;

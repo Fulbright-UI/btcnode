@@ -6,9 +6,10 @@ import { useFormat } from '@/composables/useFormat';
 
 /**
  * One dot per chain-check sample of the last hour: green = same height,
- * grey = the stranger was behind, red = it claimed more. The sentence is
- * assembled from pieces so every sample is accounted for and the verb
- * agrees with the count.
+ * grey = the stranger was behind, red = it claimed more. Every sample gets
+ * its dot — a row capped at twelve next to a sentence that counts 32 read
+ * like two different measurements. The sentence is assembled from pieces
+ * so every sample is accounted for and the verb agrees with the count.
  */
 const props = defineProps<{ check: StatusSnapshot['chainCheck']; generatedAt: number }>();
 const { t } = useI18n();
@@ -50,7 +51,7 @@ const view = computed(() => {
   }
   return {
     unsupported: false,
-    dots: c.samples.slice(-12).map((s) => s.verdict),
+    dots: c.samples.map((s) => s.verdict),
     text,
     warn: c.alarm,
     title: t('network.chainCheckTitle', { when: last }),
