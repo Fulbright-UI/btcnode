@@ -1,0 +1,39 @@
+[Unit]
+Description=btcnode host agent (restart node services, reboot, shutdown)
+Documentation=https://github.com/Fulbright-UI/btcnode
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/lib/btcnode/btcnode-agent.py
+Restart=on-failure
+RestartSec=5
+Environment=BTCNODE_AGENT_SOCKET=/run/btcnode-agent/agent.sock
+Environment=BTCNODE_AGENT_GROUP=btcnode
+Environment=BTCNODE_AGENT_UNITS=bitcoind,electrs
+RuntimeDirectory=btcnode-agent
+RuntimeDirectoryMode=0750
+
+# Runs as root because it must call systemctl. Everything else is closed:
+# it can write only its socket directory and reads nothing it does not need.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+# No network at all — it talks to systemd over D-Bus and to nobody else.
+IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,164 @@
+/* Two halves with the same gap as the rows below: brand, versions and
+   clock on the left, the chronicle on the right, its left edge on the
+   left edge of the network card. align-items:start, not center: the
+   terminal reserves two lines and the brand row sits on its FIRST line. */
+header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s1) var(--s4);
+  align-items: start;
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 80rem) {
+  header {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.brand-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  align-items: center;
+  min-width: 0;
+  line-height: 1.4;
+  min-height: 1.4em;
+}
+/* One typeface and size across the header row — brand, quote, versions, clock, all in the mono at .73rem. */
+h1 {
+  font-size: 0.73rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  white-space: nowrap;
+}
+h1 b {
+  font-weight: 400;
+  color: var(--faint);
+  letter-spacing: 0;
+}
+.brand-mark {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  display: block;
+}
+/* Versions and clock centred in what the brand leaves of the left half. */
+.header-info-zone {
+  margin-left: auto;
+}
+.header-right {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  color: var(--faint);
+  font-size: 0.73rem;
+  font-family: var(--mono);
+}
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-family: var(--mono);
+  cursor: default;
+  white-space: nowrap;
+}
+.header-info .dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 99px;
+  flex: none;
+  background: var(--accent);
+}
+.header-info.warn {
+  color: var(--warn);
+}
+.header-info.warn .dot {
+  background: var(--warn);
+}
+@media (max-width: 60rem) {
+  .header-info-zone {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .header-right {
+    margin-right: 0;
+  }
+}
+/* The pulse shows that the page updates itself. */
+.pulse {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 99px;
+  background: var(--faint);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+[data-fresh='fresh'] .pulse {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+[data-fresh='stale'] .pulse {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent);
+}
+
+/* ---- Chronicle: a terminal line in the right half of the header ------- */
+.chronicle {
+  min-width: 0;
+}
+.term {
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 0.73rem;
+  line-height: 1.4;
+  color: var(--text);
+  width: 100%;
+  min-height: 2.8em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+@media (max-width: 60rem) {
+  .term {
+    min-height: 4.2em;
+  }
+}
+.term .typed {
+  display: block;
+  /* A faint phosphor glow — a hint of the tube, not a CRT costume. */
+  text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+/* Date and name in the muted green, the quote white. */
+.term .part-date,
+.term .part-who {
+  color: color-mix(in srgb, var(--accent) 55%, var(--muted));
+}
+.term .part-text {
+  color: var(--text);
+}
+.term .cursor::after {
+  content: '▌';
+  color: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+/* Solid while writing, blinking only at rest — as a terminal does. */
+.term.typing .cursor::after {
+  animation: none;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .term .cursor::after {
+    animation: none;
+  }
+}

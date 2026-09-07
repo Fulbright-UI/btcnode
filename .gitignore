@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+deploy/secrets/
+deploy/certs/
+.DS_Store
+__pycache__/
+*.pyc
+
+# private working notes — never published (carry a real name and a home IP)
+CLAUDE.md

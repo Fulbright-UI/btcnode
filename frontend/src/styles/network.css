@@ -1,0 +1,481 @@
+/* ---- Network map card -------------------------------------------------- */
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s4);
+  margin-bottom: var(--s2);
+  flex-wrap: wrap;
+}
+.card-head h2 {
+  margin: 0;
+}
+.network-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+.network-figures b {
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Chain check: one dot per sample of the last hour. Always on a line of its own, left-aligned. */
+.chain-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-basis: 100%;
+  justify-content: flex-start;
+}
+.chain-check.warn {
+  color: var(--error);
+}
+.probes {
+  display: inline-flex;
+  gap: 3px;
+}
+.probe {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 99px;
+  display: block;
+}
+.probe.same {
+  background: var(--accent);
+}
+.probe.behind {
+  background: var(--border-light);
+}
+.probe.ahead {
+  background: var(--error);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--error) 30%, transparent);
+}
+/* The card fills its half of the row: zone, card and drawing box each grow,
+   the drawing itself keeps its aspect ratio and the surplus is air. */
+.network-zone {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.network {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex-grow: 1;
+}
+.network-map-box {
+  min-width: 0;
+  flex-grow: 1;
+}
+.network-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  margin: 0 auto;
+}
+/* Fallback while getpeerinfo is not allowed. */
+.network-fallback {
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--s1) var(--s5);
+}
+.network-fallback dd {
+  text-align: left;
+}
+/* The hub is hoverable like a peer: the detail box then shows this node as its peers see it. */
+.hub {
+  cursor: pointer;
+  outline: none;
+}
+.hub-hit {
+  fill: transparent;
+}
+.hub:hover .hub-label,
+.hub:focus-visible .hub-label {
+  fill: var(--text);
+}
+.hub-label {
+  fill: var(--faint);
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.peer-line {
+  stroke: var(--border-light);
+  stroke-width: 1;
+  stroke-opacity: 0.55;
+}
+.peer-label {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  fill: var(--muted);
+}
+.peer-dot {
+  fill: none;
+  stroke-width: 1.6;
+  stroke: currentColor;
+}
+.peer-dot.filled {
+  fill: currentColor;
+}
+/* Colour per network type set once on the group; dot and line inherit it. */
+.peer {
+  cursor: pointer;
+  outline: none;
+  color: var(--muted);
+}
+.peer.ipv4 {
+  color: var(--net-ipv4);
+}
+.peer.ipv6 {
+  color: var(--net-ipv6);
+}
+.peer.onion {
+  color: var(--net-onion);
+}
+.peer.electrs {
+  color: var(--net-electrs);
+}
+.peer.i2p,
+.peer.cjdns {
+  color: var(--net-i2p);
+}
+/* The large transparent area makes pointing easy — the visible parts are thin. */
+.peer-hit {
+  fill: transparent;
+}
+.peer:hover .peer-label,
+.peer:focus-visible .peer-label,
+.peer.active .peer-label {
+  fill: var(--text);
+}
+.peer:hover .peer-line,
+.peer:focus-visible .peer-line,
+.peer.active .peer-line {
+  stroke: currentColor;
+  stroke-opacity: 1;
+  stroke-width: 1.6;
+}
+.peer:hover .peer-hit,
+.peer:focus-visible .peer-hit,
+.peer.active .peer-hit {
+  fill: color-mix(in srgb, currentColor 9%, transparent);
+}
+/* Who announced the last block first: orange spoke, a little wider, a second ring on the dot. */
+.peer.announcer .peer-line {
+  stroke: var(--block);
+  stroke-opacity: 1;
+  stroke-width: 2;
+}
+.peer.announcer .peer-dot {
+  stroke: var(--block);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 3px var(--block));
+}
+/* The detail box has a FIXED height, not a minimum: with min-height it grew on every hover and pushed the log down. */
+.peer-detail {
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s3);
+  height: 7.4rem;
+  overflow: auto;
+  box-sizing: border-box;
+  margin-top: var(--s3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: var(--s2) var(--s5);
+}
+.peer-detail .hint {
+  color: var(--faint);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+.peer-detail .block-path {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.6;
+  flex-basis: 100%;
+}
+.peer-detail .block-path:empty {
+  display: none;
+}
+.peer-detail dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s5);
+  font-size: 0.76rem;
+  grid-template-columns: none;
+}
+.peer-detail dt {
+  color: var(--faint);
+  font-size: 0.66rem;
+  min-height: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  align-self: center;
+}
+.peer-detail dd {
+  font-size: 0.76rem;
+  text-align: left;
+  min-height: 0;
+  justify-content: flex-start;
+  margin-right: var(--s3);
+}
+.peer-address {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  word-break: break-all;
+  color: var(--text);
+  line-height: 1.45;
+  flex-basis: 100%;
+}
+.peer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+}
+@media (max-width: 36rem) {
+  .network-map {
+    max-height: 20rem;
+  }
+}
+
+/* ---- Log ----------------------------------------------------------- */
+/* The log fills the rest of the right column; the box inside claims what the header leaves over. */
+.log-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  min-height: 16rem;
+}
+.log-panel .card-head {
+  align-items: center;
+}
+.log-panel .hint {
+  color: var(--faint);
+  font-size: 0.7rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  margin-left: auto;
+}
+/* The <pre> sits absolutely and contributes nothing to the height — otherwise 150 log lines dictate the height of the page. */
+.log-box {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+.log-panel pre {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: auto;
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--s2) var(--s3);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  white-space: pre;
+  tab-size: 4;
+}
+/* Only what one looks for: trouble at full colour, the accepted tip as a warm tint. */
+.log-line.error {
+  color: var(--error);
+}
+.log-line.warn {
+  color: var(--warn);
+}
+.log-line.tip {
+  color: color-mix(in srgb, var(--block) 35%, var(--muted));
+}
+.log-line .highlight {
+  color: color-mix(in srgb, var(--block) 65%, var(--muted));
+}
+.log-panel pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.log-panel pre::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 9px;
+}
+
+/* ---- Control: a toggle in the header row, a popover below it --------- */
+.control {
+  position: relative;
+}
+/* Same voice as the version line: mono, .73rem, a dot in front. */
+.control-toggle {
+  margin-left: var(--s1);
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font: inherit;
+  color: var(--faint);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.control-toggle svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* A green dot next to the gear while logged in. */
+.control-toggle .dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 99px;
+  flex: none;
+  background: var(--accent);
+}
+.control-toggle:hover,
+.control-toggle.open {
+  color: var(--text);
+}
+.control-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Opens under the toggle, to the right: the toggle sits mid-page next to the clock. */
+.control-popover {
+  position: absolute;
+  top: calc(100% + var(--s2));
+  left: 0;
+  z-index: 10;
+  width: min(24rem, calc(100vw - 2 * var(--s4)));
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: var(--s4);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.control-popover h2 {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  font-weight: 600;
+  margin: 0;
+}
+.control-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+}
+.control-actions button,
+.control-form button,
+.control-confirm button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: var(--s2) var(--s3);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--sunken);
+  color: var(--text);
+  cursor: pointer;
+}
+.control-actions button:hover,
+.control-form button:hover,
+.control-confirm button:hover {
+  border-color: var(--border-strong);
+}
+.control-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.control-actions button.danger {
+  border-color: color-mix(in srgb, var(--error) 50%, var(--border-light));
+}
+.control-form {
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.control-form input {
+  font: inherit;
+  font-size: 0.8rem;
+  flex: 1;
+  min-width: 10rem;
+  padding: var(--s2) var(--s3);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--sunken);
+  color: var(--text);
+}
+.control-form input:focus-visible,
+.control-actions button:focus-visible,
+.control-confirm button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.control-confirm {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.83rem;
+}
+.control-confirm .primary {
+  border-color: var(--error);
+  color: var(--error);
+}
+.control-status {
+  font-size: 0.78rem;
+  color: var(--muted);
+  min-height: var(--row);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.control-status.good {
+  color: var(--accent);
+}
+.control-status.error {
+  color: var(--error);
+}
+.control-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+}
+.control-head .hint {
+  color: var(--faint);
+  font-size: 0.7rem;
+}
+.control-head button {
+  font: inherit;
+  font-size: 0.7rem;
+  background: none;
+  border: 0;
+  color: var(--faint);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}

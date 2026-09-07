@@ -1,0 +1,113 @@
+# btcnode
+
+A dashboard and a small control panel for a self-hosted Bitcoin full node on a
+Raspberry Pi — Bitcoin Core, an Electrum server, Tor. Two containers, one
+tiny host agent, and the scripts that set the node up in the first place.
+
+The page shows what the node is doing: sync state, block height, fees, the
+peers as a fan around your own node, who announced the last block first,
+Core's own chain check against strangers, the Electrum index, temperature,
+power supply, and the raw journal. Everything it reads it reads locally; it
+never goes to the internet for a picture.
+
+```
+browser ──443──► nginx (web container) ──► static page (Vue)
+                      │
+                      └── /api ──► backend (api container)
+                                      │  reads   bitcoind RPC (read-only account)
+                                      │  reads   the systemd journal
+                                      │  reads   /proc, /sys, electrs
+                                      └─ control ─► host agent (Unix socket, 4 actions)
+                                                       └─► systemctl restart / reboot / poweroff
+```
+
+## Parts
+
+| Directory   | What                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------- |
+| `frontend/` | The page. Vue 3, Vite, TypeScript, Pinia, vue-i18n (`en`, `de`). Own SVG components.  |
+| `backend/`  | Collector and API. Node 22, Fastify, TypeScript, zod. Polls the node, judges, serves.  |
+| `shared/`   | The contract between the two: zod schemas of the status snapshot, thresholds, actions. |
+| `agent/`    | The host agent: Python 3 (standard library), runs as root, knows exactly four actions. |
+| `deploy/`   | Docker Compose, the two Dockerfiles, nginx with TLS and a strict CSP.                 |
+| `scripts/`  | `install.sh` for the dashboard; `node-setup/` builds the node itself (disk, Core, electrs, Tor). |
+
+## Install on the Pi
+
+Set the node up first (`scripts/node-setup/README.md`), then:
+
+```bash
+git clone https://github.com/Fulbright-UI/btcnode.git
+cd btcnode
+sudo bash scripts/install.sh
+```
+
+The installer puts Docker in place if it is missing, installs the agent,
+creates a read-only RPC account in `bitcoin.conf` (or reuses the one an
+earlier dashboard had), asks for an admin password, makes a self-signed
+certificate, writes `deploy/.env`, opens the port for the home network only,
+and starts the containers. By default the page comes up on **https://…:8443**
+so it can run next to an existing dashboard; `scripts/replace-legacy-dashboard.sh`
+moves it to 443/80 and retires the old one.
+
+Language: the page follows the browser, `?lang=de` / `?lang=en` overrides,
+the footer remembers the choice.
+
+## What the page publishes
+
+Anyone on the network who can open the page sees your node's onion address,
+every peer address, the full journal of bitcoind, and — only after logging in
+— may restart services, reboot or shut the Pi down. The installer limits the
+port to your LAN subnet; do not forward it.
+
+## Security, in one paragraph
+
+The api container is read-only, runs unprivileged, drops all capabilities,
+joins exactly two host groups (`systemd-journal` to read the log, `btcnode`
+for the agent socket), and mounts the journal, the data directory (for the
+disk figure — the chain itself stays unreadable) and the agent socket. The
+RPC account may call eight read-only methods; `rpcwhitelistdefault=0` blocks
+the rest. The agent is the only privilege on the host: it accepts four fixed
+actions over a group-protected Unix socket and refuses everything else — no
+unit name, no argument, no shell ever comes from the network. The control
+routes sit behind a bcrypt password, a server-side session cookie
+(`HttpOnly`, `Secure`, `SameSite=Strict`), a custom-header CSRF check and a
+rate limit. Sessions live in the api process's memory: restarting or
+rebuilding the container logs the admin out, which is intended — there is
+nothing on disk to steal. The page itself ships with no inline script or
+style, so the CSP is `default-src 'none'; script-src 'self'; style-src 'self'`.
+
+## Develop
+
+```bash
+pnpm install
+pnpm --filter ./shared build
+pnpm --filter ./backend mock       # a full dashboard against a mock node on http://127.0.0.1:3000/
+pnpm --filter ./frontend dev       # Vite dev server, proxies /api to :3000
+pnpm check                         # lint, typecheck, tests, build — what CI runs
+```
+
+`MOCK_SCENARIO=syncing` or `empty` shows the initial sync and an empty node.
+The mock is a real HTTP JSON-RPC server with Basic Auth, and unknown methods
+answer 403 like a missing whitelist entry would — the same client code runs
+there as against the Pi. The agent has its own tests
+(`python3 -m unittest agent/tests/test_agent.py`), the setup scripts theirs
+(`scripts/node-setup/tests/check.sh`).
+
+### Configuration
+
+The backend reads its environment (validated at start — a wrong value fails
+loudly instead of freezing the page). `deploy/.env.example` lists the knobs;
+`backend/src/config.ts` is the authority. Secrets (`rpc_password`,
+`admin_password_hash`, `session_key`) live as files in `deploy/secrets/`.
+
+### The status contract
+
+`GET /api/status` returns facts, not sentences: numbers, unix seconds, bytes,
+sat/vB, fractions, and warning *codes*. Wording, number notation and dates
+belong to the frontend and its locale files. `shared/src/status.ts` is the
+schema; the backend validates every snapshot against it before serving it.
+
+## License
+
+MIT — see `LICENSE`.

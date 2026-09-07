@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1.7
+# The backend: collector, API, control. Built from the monorepo root:
+#   docker build -f deploy/Dockerfile.api -t btcnode-api .
+
+FROM node:22-bookworm-slim AS build
+RUN corepack enable
+WORKDIR /src
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY shared/package.json shared/
+COPY backend/package.json backend/
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter ./shared --filter ./backend
+COPY tsconfig.base.json ./
+COPY shared/ shared/
+COPY backend/ backend/
+RUN pnpm --filter ./shared build && pnpm --filter ./backend build \
+ && pnpm --filter ./backend deploy --prod --legacy /out
+
+FROM node:22-bookworm-slim
+# journalctl lives in the systemd package on Debian; it reads the host's
+# journal files mounted read-only, nothing else of systemd runs here.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends systemd ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build --chown=node:node /out/ ./
+ENV NODE_ENV=production HOST=127.0.0.1 PORT=3000
+USER node
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "dist/index.js"]

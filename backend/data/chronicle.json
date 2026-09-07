@@ -1,0 +1,462 @@
+[
+  {
+    "date": "1694-07-27",
+    "who": "Bank of England",
+    "text": "The Bank of England is chartered to lend the Crown 1.2 million pounds: the first modern central bank"
+  },
+  {
+    "date": "1791-02-25",
+    "who": "George Washington",
+    "text": "Hamilton's national bank is chartered for twenty years over Jefferson's objection"
+  },
+  {
+    "date": "1816-04-10",
+    "who": "James Madison",
+    "text": "A second national bank is chartered after the inflation of the War of 1812"
+  },
+  {
+    "date": "1832-07-10",
+    "who": "Andrew Jackson",
+    "text": "It is to be regretted that the rich and powerful too often bend the acts of government to their selfish purposes."
+  },
+  {
+    "date": "1862-02-25",
+    "who": "Legal Tender Act",
+    "text": "The Union prints paper money that is legal tender by law, backed by nothing but the government's word"
+  },
+  {
+    "date": "1873-02-12",
+    "who": "Coinage Act",
+    "text": "Silver is demonetised; the United States moves to a de facto gold standard"
+  },
+  {
+    "date": "1900-03-14",
+    "who": "Gold Standard Act",
+    "text": "The dollar is defined as 25.8 grains of gold, nine-tenths fine"
+  },
+  {
+    "date": "1907-10-22",
+    "who": "Knickerbocker Trust",
+    "text": "A bank run in New York spreads through the country; J. P. Morgan organises the rescue himself"
+  },
+  {
+    "date": "1908-05-30",
+    "who": "Aldrich-Vreeland Act",
+    "text": "Emergency currency and a National Monetary Commission to study a central bank"
+  },
+  {
+    "date": "1910-11-22",
+    "who": "Jekyll Island",
+    "text": "Senator Aldrich and bankers from Morgan, Rockefeller and Kuhn, Loeb draft a central bank plan in secret"
+  },
+  {
+    "date": "1913",
+    "who": "Woodrow Wilson",
+    "text": "A great industrial nation is controlled by its system of credit. Our system of credit is concentrated."
+  },
+  {
+    "date": "1913-02-03",
+    "who": "16th Amendment",
+    "text": "Congress may tax incomes; the federal income tax follows the same year"
+  },
+  {
+    "date": "1913-12-23",
+    "who": "Woodrow Wilson",
+    "text": "The Federal Reserve Act is signed two days before Christmas"
+  },
+  {
+    "date": "1914-11-16",
+    "who": "Federal Reserve",
+    "text": "The twelve Federal Reserve Banks open for business"
+  },
+  {
+    "date": "1929-10-24",
+    "who": "Wall Street",
+    "text": "The stock market crashes; the Great Depression begins"
+  },
+  {
+    "date": "1933-04-05",
+    "who": "Franklin D. Roosevelt",
+    "text": "Americans must hand their gold to the Federal Reserve at 20.67 dollars an ounce"
+  },
+  {
+    "date": "1934-01-30",
+    "who": "Gold Reserve Act",
+    "text": "The dollar is devalued to 35 dollars an ounce; the gold belongs to the Treasury now"
+  },
+  {
+    "date": "1944-07-22",
+    "who": "Bretton Woods",
+    "text": "44 nations peg their currencies to the dollar, and the dollar to gold at 35 an ounce"
+  },
+  {
+    "date": "1965-07-23",
+    "who": "Coinage Act",
+    "text": "Silver is removed from dimes and quarters; coins become tokens"
+  },
+  {
+    "date": "1968-03-18",
+    "who": "Congress",
+    "text": "The last gold cover for Federal Reserve notes is removed"
+  },
+  {
+    "date": "1971-08-15",
+    "who": "Richard Nixon",
+    "text": "The dollar's convertibility into gold is suspended; money is now backed by trust alone"
+  },
+  {
+    "date": "1974-12-31",
+    "who": "United States",
+    "text": "Americans may own gold again, forty-one years after the confiscation"
+  },
+  {
+    "date": "1976-11",
+    "who": "Whitfield Diffie, Martin Hellman",
+    "text": "Public-key cryptography is born"
+  },
+  {
+    "date": "1983",
+    "who": "David Chaum",
+    "text": "Digital cash that cannot be traced is described for the first time"
+  },
+  {
+    "date": "1990",
+    "who": "David Chaum",
+    "text": "DigiCash is founded in Amsterdam to bring untraceable e-cash to banks"
+  },
+  {
+    "date": "1992-09",
+    "who": "Cypherpunks",
+    "text": "The cypherpunks mailing list starts in the Bay Area"
+  },
+  {
+    "date": "1993-03-09",
+    "who": "Eric Hughes",
+    "text": "Privacy is necessary for an open society in the electronic age."
+  },
+  {
+    "date": "1996",
+    "who": "e-gold",
+    "text": "e-gold launches: digital money backed by gold in a vault"
+  },
+  {
+    "date": "1997-03-28",
+    "who": "Adam Back",
+    "text": "Hashcash: proof of work against spam, later the puzzle Bitcoin miners solve"
+  },
+  {
+    "date": "1998-10-01",
+    "who": "Liberty Dollar",
+    "text": "A private silver-backed currency goes on sale in the United States"
+  },
+  {
+    "date": "1998-11",
+    "who": "Wei Dai",
+    "text": "b-money: an anonymous, distributed electronic cash system, cited in the Bitcoin paper"
+  },
+  {
+    "date": "1999-11-12",
+    "who": "Gramm-Leach-Bliley Act",
+    "text": "Glass-Steagall is repealed; commercial and investment banking merge again"
+  },
+  {
+    "date": "2004-08-15",
+    "who": "Hal Finney",
+    "text": "Reusable proofs of work: Hashcash tokens that can be passed on"
+  },
+  {
+    "date": "2005-12",
+    "who": "Nick Szabo",
+    "text": "Bit gold, the design closest to Bitcoin, is published"
+  },
+  {
+    "date": "2007-04-27",
+    "who": "e-gold",
+    "text": "e-gold is indicted for money laundering; it never recovers"
+  },
+  {
+    "date": "2007-11-14",
+    "who": "FBI",
+    "text": "The Liberty Dollar's offices are raided and its silver seized"
+  },
+  {
+    "date": "2008-08-18",
+    "who": "bitcoin.org",
+    "text": "The domain bitcoin.org is registered"
+  },
+  {
+    "date": "2008-09-15",
+    "who": "Lehman Brothers",
+    "text": "Lehman Brothers files for bankruptcy, the largest in US history"
+  },
+  {
+    "date": "2008-10-31",
+    "who": "Satoshi Nakamoto",
+    "text": "I've been working on a new electronic cash system that's fully peer-to-peer, with no trusted third party."
+  },
+  {
+    "date": "2008-11-07",
+    "who": "Hal Finney",
+    "text": "Bitcoin seems to be a very promising idea."
+  },
+  {
+    "date": "2008-11-07",
+    "who": "Satoshi Nakamoto",
+    "text": "Pure P2P networks like Gnutella and Tor seem to be holding their own."
+  },
+  {
+    "date": "2008-11-08",
+    "who": "Satoshi Nakamoto",
+    "text": "There will be deflation and early holders of money will see its value increase."
+  },
+  {
+    "date": "2008-11-13",
+    "who": "Satoshi Nakamoto",
+    "text": "The proof-of-work chain is a solution to the Byzantine Generals' Problem."
+  },
+  {
+    "date": "2008-11-14",
+    "who": "Satoshi Nakamoto",
+    "text": "I'm better with code than with words though."
+  },
+  {
+    "date": "2009-01-03",
+    "who": "The Times",
+    "text": "Chancellor on brink of second bailout for banks"
+  },
+  {
+    "date": "2009-01-09",
+    "who": "Satoshi Nakamoto",
+    "text": "Total circulation will be 21,000,000 coins."
+  },
+  {
+    "date": "2009-01-11",
+    "who": "Hal Finney",
+    "text": "Running bitcoin"
+  },
+  {
+    "date": "2009-01-12",
+    "who": "Block 170",
+    "text": "Satoshi sends 10 BTC to Hal Finney, the first Bitcoin transaction"
+  },
+  {
+    "date": "2009-01-16",
+    "who": "Satoshi Nakamoto",
+    "text": "It might make sense just to get some in case it catches on."
+  },
+  {
+    "date": "2009-02-11",
+    "who": "Satoshi Nakamoto",
+    "text": "The root problem with conventional currency is all the trust that's required to make it work."
+  },
+  {
+    "date": "2009-02-11",
+    "who": "Satoshi Nakamoto",
+    "text": "They lend it out in waves of credit bubbles with barely a fraction in reserve."
+  },
+  {
+    "date": "2010-02-06",
+    "who": "Satoshi Nakamoto",
+    "text": "At most only 21 million coins for 6.8 billion people in the world."
+  },
+  {
+    "date": "2010-02-14",
+    "who": "Satoshi Nakamoto",
+    "text": "I'm sure that in 20 years there will either be very large transaction volume or no volume."
+  },
+  {
+    "date": "2010-05-18",
+    "who": "Laszlo Hanyecz",
+    "text": "I'll pay 10,000 bitcoins for a couple of pizzas."
+  },
+  {
+    "date": "2010-05-22",
+    "who": "bitcointalk",
+    "text": "Two pizzas bought for 10,000 BTC, the first real-world purchase"
+  },
+  {
+    "date": "2010-06-17",
+    "who": "Satoshi Nakamoto",
+    "text": "Once version 0.1 was released, the core design was set in stone for the rest of its lifetime."
+  },
+  {
+    "date": "2010-06-21",
+    "who": "Satoshi Nakamoto",
+    "text": "Lost coins only make everyone else's coins worth slightly more. Think of it as a donation to everyone."
+  },
+  {
+    "date": "2010-07-05",
+    "who": "Satoshi Nakamoto",
+    "text": "Writing a description for this thing for general audiences is bloody hard."
+  },
+  {
+    "date": "2010-07-11",
+    "who": "Slashdot",
+    "text": "Bitcoin 0.3 hits the front page, users and price climb within days"
+  },
+  {
+    "date": "2010-07-18",
+    "who": "Mt. Gox",
+    "text": "Mt. Gox opens as a Bitcoin exchange"
+  },
+  {
+    "date": "2010-08-07",
+    "who": "Satoshi Nakamoto",
+    "text": "Not having Bitcoin would be the net waste."
+  },
+  {
+    "date": "2010-08-27",
+    "who": "Satoshi Nakamoto",
+    "text": "Bitcoins have no dividend, therefore not like a stock. More like a collectible or commodity."
+  },
+  {
+    "date": "2010-12-11",
+    "who": "Satoshi Nakamoto",
+    "text": "WikiLeaks has kicked the hornet's nest, and the swarm is headed towards us."
+  },
+  {
+    "date": "2011-02-09",
+    "who": "Slashdot",
+    "text": "Bitcoin reaches parity with the US dollar"
+  },
+  {
+    "date": "2011-03-18",
+    "who": "Liberty Dollar",
+    "text": "Its founder is convicted; the currency is finished"
+  },
+  {
+    "date": "2011-04-20",
+    "who": "Forbes",
+    "text": "First big-press feature on Bitcoin"
+  },
+  {
+    "date": "2011-04-23",
+    "who": "Satoshi Nakamoto",
+    "text": "I've moved on to other things. It's in good hands with Gavin and everyone."
+  },
+  {
+    "date": "2011-06-01",
+    "who": "Gawker",
+    "text": "The underground website where you can buy any drug imaginable"
+  },
+  {
+    "date": "2011-06-19",
+    "who": "Mt. Gox",
+    "text": "Mt. Gox is hacked, the price collapses to a cent on the exchange"
+  },
+  {
+    "date": "2012-11-28",
+    "who": "Block 210,000",
+    "text": "The block reward drops from 50 to 25 BTC"
+  },
+  {
+    "date": "2013-03-19",
+    "who": "Hal Finney",
+    "text": "I think I was the first person besides Satoshi to run bitcoin."
+  },
+  {
+    "date": "2013-03-28",
+    "who": "market",
+    "text": "Bitcoin's market capitalisation passes one billion dollars"
+  },
+  {
+    "date": "2013-05-28",
+    "who": "Liberty Reserve",
+    "text": "Liberty Reserve is shut down; prosecutors speak of 6 billion dollars laundered"
+  },
+  {
+    "date": "2013-10-02",
+    "who": "FBI",
+    "text": "Silk Road is seized and Ross Ulbricht arrested in San Francisco"
+  },
+  {
+    "date": "2013-10-29",
+    "who": "Vancouver",
+    "text": "The world's first Bitcoin ATM opens in a coffee shop"
+  },
+  {
+    "date": "2013-11-27",
+    "who": "Mt. Gox",
+    "text": "Bitcoin trades above 1,000 dollars for the first time"
+  },
+  {
+    "date": "2013-12-05",
+    "who": "People's Bank of China",
+    "text": "Chinese financial institutions are barred from handling Bitcoin"
+  },
+  {
+    "date": "2014-02-28",
+    "who": "Mt. Gox",
+    "text": "Mt. Gox files for bankruptcy, 850,000 BTC reported missing"
+  },
+  {
+    "date": "2014-03-06",
+    "who": "Newsweek",
+    "text": "Newsweek names Dorian Nakamoto as Satoshi; he denies it"
+  },
+  {
+    "date": "2016-07-09",
+    "who": "Block 420,000",
+    "text": "The block reward drops from 25 to 12.5 BTC"
+  },
+  {
+    "date": "2017-08-01",
+    "who": "Block 478,558",
+    "text": "Bitcoin Cash splits off from the chain"
+  },
+  {
+    "date": "2017-08-24",
+    "who": "Block 481,824",
+    "text": "Segregated Witness activates"
+  },
+  {
+    "date": "2017-12-17",
+    "who": "market",
+    "text": "Bitcoin nears 20,000 dollars, CME futures start the next day"
+  },
+  {
+    "date": "2020-05-11",
+    "who": "Block 630,000",
+    "text": "The block reward drops from 12.5 to 6.25 BTC"
+  },
+  {
+    "date": "2021-02-08",
+    "who": "Tesla",
+    "text": "Tesla discloses 1.5 billion dollars in Bitcoin"
+  },
+  {
+    "date": "2021-09-07",
+    "who": "El Salvador",
+    "text": "Bitcoin becomes legal tender in El Salvador"
+  },
+  {
+    "date": "2021-11-10",
+    "who": "market",
+    "text": "Bitcoin passes 69,000 dollars"
+  },
+  {
+    "date": "2021-11-14",
+    "who": "Block 709,632",
+    "text": "Taproot activates"
+  },
+  {
+    "date": "2022-11-11",
+    "who": "FTX",
+    "text": "FTX files for bankruptcy"
+  },
+  {
+    "date": "2024-01-10",
+    "who": "SEC",
+    "text": "The SEC approves spot Bitcoin ETFs in the United States"
+  },
+  {
+    "date": "2024-04-20",
+    "who": "Block 840,000",
+    "text": "The block reward drops from 6.25 to 3.125 BTC"
+  },
+  {
+    "date": "2024-12-05",
+    "who": "market",
+    "text": "Bitcoin crosses 100,000 dollars"
+  }
+]

@@ -1,0 +1,384 @@
+/* ---- Cards ----------------------------------------------------------- */
+/* A grid: matching top edges look tidy and the reading order matches the
+   source. auto-fit, not auto-fill — fill leaves empty tracks and a hole. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: var(--s3);
+}
+.charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s3);
+  grid-auto-rows: 1fr;
+}
+/* A fixed column count as soon as the COLUMN is wide enough — not the window. */
+@container (min-width: 56rem) {
+  .grid.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .grid.cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@container (min-width: 38rem) {
+  .charts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.charts .mini-chart {
+  height: calc(var(--row) * 3.2);
+}
+.charts dd.chart {
+  min-height: calc(var(--row) * 3.6);
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s4);
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+.card h2 {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  font-weight: 600;
+  margin-bottom: var(--s3);
+}
+/* No row-gap, a fixed minimum row height instead: every row stays on the same grid even next to a graph. */
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  row-gap: 0;
+  column-gap: var(--s3);
+  font-size: 0.83rem;
+}
+dt,
+dd {
+  min-height: var(--row);
+  display: flex;
+  align-items: center;
+}
+dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+dd {
+  justify-content: flex-end;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+dd.warn {
+  color: var(--warn);
+}
+dd.good {
+  color: var(--accent);
+}
+dd.faint {
+  color: var(--faint);
+}
+dd.chart {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  min-height: calc(var(--row) * 2);
+}
+/* Inner columns of a card: two value lists side by side, a hairline between them; below the card's own width threshold they stack. */
+.columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s3) var(--s5);
+}
+@container (min-width: 30rem) {
+  .columns {
+    grid-template-columns: 1fr 1fr;
+  }
+  .column + .column {
+    border-left: 1px solid var(--border);
+    padding-left: var(--s5);
+  }
+}
+.columns + .copy-block {
+  margin-top: var(--s4);
+}
+.column h3 {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  font-weight: 600;
+  min-height: var(--row);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.column dl {
+  flex: 1;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chart-label {
+  grid-column: 1 / -1;
+  color: var(--faint);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  align-items: flex-end;
+  padding-bottom: var(--s1);
+}
+span.chart-label {
+  display: flex;
+  min-height: var(--row);
+}
+/* The card's foot: a graph after the last row, outside the list, so it can grow with the card. */
+.chart-foot {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(var(--row) * 2);
+}
+.charts .chart-foot {
+  flex: 1;
+  min-height: calc(var(--row) * 3.2);
+}
+.charts .chart-foot .mini-chart {
+  flex: 1;
+  height: auto;
+}
+.mini-chart {
+  display: block;
+  width: 100%;
+  height: calc(var(--row) * 1.6);
+}
+/* Skeleton instead of graph: dashed and muted so nobody mistakes it for a measurement. */
+.skeleton-line {
+  stroke: var(--border-light);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 5;
+}
+.skeleton-part {
+  fill: var(--border-light);
+  opacity: 0.45;
+}
+.skeleton {
+  opacity: 0.65;
+}
+/* Column colours by class — never by inline style (the CSP would drop it). */
+.col-tier-1 {
+  fill: var(--tier-1);
+}
+.col-tier-2 {
+  fill: var(--tier-2);
+}
+.col-tier-3 {
+  fill: var(--tier-3);
+}
+.col-good {
+  fill: var(--accent);
+}
+.col-warn {
+  fill: var(--warn);
+}
+.col-error {
+  fill: var(--error);
+}
+.col-stub {
+  fill: var(--border-light);
+}
+/* Bar: track and rounded corners from CSS, exact width from the SVG. */
+.bar {
+  display: block;
+  width: 100%;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  line-height: 0;
+}
+.bar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bar.h6 {
+  height: 6px;
+}
+.bar.h8 {
+  height: 8px;
+}
+.bar.h10 {
+  height: 10px;
+}
+.bar-fill {
+  fill: var(--accent);
+}
+.bar-fill.warn {
+  fill: var(--warn);
+}
+.bar-fill.error {
+  fill: var(--error);
+}
+.bar svg rect:hover,
+.columns-chart rect:hover {
+  opacity: 0.75;
+}
+
+/* ---- Copy fields ------------------------------------------------------ */
+.copy-block {
+  display: grid;
+  gap: var(--s2);
+  align-content: start;
+}
+.copy-label {
+  display: block;
+  color: var(--faint);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--s1);
+}
+.copy-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s2);
+  min-width: 0;
+}
+.copy-text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  user-select: all;
+  -webkit-user-select: all;
+  color: var(--text);
+  background: var(--sunken);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: var(--s2) var(--s3);
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.copy-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  background: var(--sunken);
+  color: var(--muted);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.copy-button svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.copy-button:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.copy-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.copy-button.done {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.card-foot {
+  margin-top: var(--s3);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+/* ---- Legends (network map and chart tiers share the dots) ------------- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s3);
+  color: var(--faint);
+  font-size: 0.68rem;
+  margin-top: var(--s2);
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+.chart-legend {
+  margin-top: var(--s1);
+}
+.swatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 99px;
+  display: block;
+  flex: none;
+  background: var(--muted);
+}
+.swatch.ipv4 {
+  background: var(--net-ipv4);
+}
+.swatch.ipv6 {
+  background: var(--net-ipv6);
+}
+.swatch.onion {
+  background: var(--net-onion);
+}
+.swatch.electrs {
+  background: var(--net-electrs);
+}
+.swatch.i2p,
+.swatch.cjdns {
+  background: var(--net-i2p);
+}
+.swatch.announcer {
+  background: var(--block);
+}
+.swatch.good {
+  background: var(--accent);
+}
+.swatch.warn {
+  background: var(--warn);
+}
+.swatch.tier-1 {
+  background: var(--tier-1);
+}
+.swatch.tier-2 {
+  background: var(--tier-2);
+}
+.swatch.tier-3 {
+  background: var(--tier-3);
+}
+/* Direction: ring = inbound, filled = outbound, in the neutral colour so no network is implied. */
+.swatch.direction {
+  background: none;
+  border: 1.6px solid var(--muted);
+  box-sizing: border-box;
+}
+.swatch.direction.filled {
+  background: var(--muted);
+}

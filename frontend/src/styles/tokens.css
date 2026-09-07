@@ -1,0 +1,79 @@
+/* Design tokens. Direction: a dark professional tool — calm surfaces, clear
+   hierarchy, the accent used sparingly. Effect comes from grid, spacing and
+   typography, not from decoration. */
+:root {
+  /* Surfaces — bottom to top: ground, card, raised surface, sunken field */
+  --bg: #0a0c11;
+  --surface: #111419;
+  --surface-2: #161a22;
+  --sunken: #0d1015;
+  --border: #1e232c;
+  --border-light: #2a313d;
+  --border-strong: #3a4353;
+  /* Type — three levels, no more are needed */
+  --text: #e7eaf1;
+  --muted: #98a1b2;
+  --faint: #68717f;
+  /* Meaning. Green says "as expected", not "problem solved". */
+  --accent: #2fd39a;
+  --warn: #f0b23f;
+  --error: #f2645f;
+  --info: #5aa2f0;
+  /* Network types in the map. I2P is magenta: yellow collided with the warning colour. */
+  --net-ipv4: #5aa2f0;
+  --net-ipv6: #9b8cff;
+  --net-onion: #2fd39a;
+  --net-i2p: #e070c8;
+  /* Our own electrs among the peers: a lighter, cooler blue than IPv4 */
+  --net-electrs: #4cc3ff;
+  /* Bitcoin orange — used for the last block's announcer and the log's tip lines, nowhere else */
+  --block: #f7931a;
+  /* The three steps of the 24-hour bars, low to high: neutral grey, the accent, block orange only at the top */
+  --tier-1: #4a5361;
+  --tier-2: #2fd39a;
+  --tier-3: #f7931a;
+  --bar: var(--accent);
+  /* Spacing scale: everything else is a multiple of these */
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  /* Baseline row: every row in every card is this tall or a multiple of it — only then do neighbouring cards line up */
+  --row: 1.6rem;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f6f9;
+    --surface: #fff;
+    --surface-2: #fafbfd;
+    --sunken: #f0f2f6;
+    --border: #e2e6ee;
+    --border-light: #cdd4e0;
+    --border-strong: #aab3c4;
+    --text: #101319;
+    --muted: #586074;
+    --faint: #828b9c;
+    --accent: #0d9c6b;
+    --warn: #b8791a;
+    --error: #d33f3c;
+    --info: #2b6fd0;
+    --net-ipv4: #2b6fd0;
+    --net-ipv6: #6a52e0;
+    --net-onion: #0d9c6b;
+    --net-i2p: #b0399a;
+    --net-electrs: #0e8ed0;
+    --block: #d9780a;
+    --tier-1: #b4b2a9;
+    --tier-2: #0d9c6b;
+    --tier-3: #d9780a;
+    --shadow: 0 1px 2px rgba(16, 19, 25, 0.05), 0 8px 24px -14px rgba(16, 19, 25, 0.22);
+  }
+}

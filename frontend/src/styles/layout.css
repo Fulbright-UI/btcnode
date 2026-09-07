@@ -1,0 +1,114 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  padding: var(--s5) var(--s4) var(--s6);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* Full screen width, no maximum: the dashboard is a display, not running text. */
+.shell {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+/* Not one grid over the whole page but TWO rows, each a grid of its own:
+   above, the network card next to the state bar, band and charts; below,
+   the log next to the card grid. Only that puts the seam between network
+   card and log onto the seam of the left column — a single grid sizes the
+   right column from its own content. Rows instead of subgrid: a subgrid may
+   not carry layout containment, and container-type on .left does exactly
+   that — the card columns need it. */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s4);
+  align-items: stretch;
+}
+/* container-type: the card grid follows the width of THIS column, not the window. */
+.left,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+  container-type: inline-size;
+}
+/* min-width:0 is required, not nice-to-have: grid items default to the
+   minimum width of their content, and for the log with white-space:pre
+   that is the longest line — without this the whole page is clipped. */
+.left > *,
+.right > * {
+  min-width: 0;
+}
+/* Empty zones would still count as flex items and open a second gap. */
+.left > *:empty,
+.right > *:empty {
+  display: none;
+}
+/* Exactly half and half, in every browser, at every resolution. */
+@media (min-width: 80rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+/* Whichever block in a row is shorter gives way: the charts take the
+   difference when the network card is taller; during the initial sync,
+   where there are no charts, the metric band does. */
+.charts {
+  flex-grow: 1;
+}
+.left:has(.charts:empty) .band {
+  flex-grow: 1;
+}
+
+footer {
+  color: var(--faint);
+  font-size: 0.72rem;
+  text-align: center;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+footer button {
+  background: none;
+  border: 0;
+  color: var(--faint);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+footer button:hover {
+  color: var(--text);
+}
+
+@media (max-width: 36rem) {
+  body {
+    padding: var(--s4) var(--s3) var(--s5);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

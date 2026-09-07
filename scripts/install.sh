@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+#
+# scripts/install.sh — puts the btcnode dashboard on a Raspberry Pi.
+#
+# What it does, in order:
+#   1. Docker Engine + Compose plugin from Docker's apt repository (if missing)
+#   2. the host agent (btcnode-agent.service) and the `btcnode` group
+#   3. the RPC account `dashboard` in bitcoin.conf, read-only whitelist
+#   4. secrets: RPC password, admin password hash, session key
+#   5. a self-signed TLS certificate
+#   6. deploy/.env from what it finds on this machine
+#   7. a firewall rule for the web port, home network only
+#   8. builds and starts the two containers, then checks the page answers
+#
+# Repeatable: running it twice changes nothing that is already right.
+#
+# Usage:  sudo bash scripts/install.sh [--web-port 8443] [--http-port 8080] [--lan 192.168.0.0/16] [--yes]
+#
+# 8443/8080 let it run next to an existing dashboard on 80. Once you are
+# happy, scripts/replace-legacy-dashboard.sh moves it to 443/80.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEPLOY="$REPO/deploy"
+AGENT_LIB="/usr/local/lib/btcnode"
+UNIT_DIR="/etc/systemd/system"
+WEB_PORT=8443
+HTTP_PORT=8080
+LAN=""
+ASSUME_YES=0
+RPC_METHODS="getblockchaininfo,getnetworkinfo,getmempoolinfo,uptime,getpeerinfo,getblockstats,getnetworkhashps,estimatesmartfee"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --web-port) WEB_PORT="${2:?--web-port needs a value}"; shift 2 ;;
+    --http-port) HTTP_PORT="${2:?--http-port needs a value}"; shift 2 ;;
+    --lan) LAN="${2:?--lan needs a value}"; shift 2 ;;
+    --yes|-y) ASSUME_YES=1; shift ;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -t 1 ]]; then BOLD=$'\e[1m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; RED=$'\e[31m'; RESET=$'\e[0m'; else BOLD=""; GREEN=""; YELLOW=""; RED=""; RESET=""; fi
+title() { printf '\n%s== %s ==%s\n' "$BOLD" "$*" "$RESET"; }
+ok()    { printf '  %s[ok]%s %s\n' "$GREEN" "$RESET" "$*"; }
+note()  { printf '  %s[..]%s %s\n' "$YELLOW" "$RESET" "$*"; }
+fail()  { printf '  %s[!!]%s %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
+ask() {
+  # ask "question" default(y|n) — with --yes or without a terminal the default applies
+  local q="$1" d="${2:-n}" a
+  if [[ $ASSUME_YES -eq 1 || ! -t 0 ]]; then [[ "$d" == y ]]; return; fi
+  read -r -p "  $q [$([[ $d == y ]] && echo Y/n || echo y/N)] " a
+  a="${a:-$d}"; [[ "$a" =~ ^[Yy] ]]
+}
+
+[[ $EUID -eq 0 ]] || fail "run as root: sudo bash scripts/install.sh"
+[[ "$WEB_PORT" =~ ^[0-9]+$ && "$WEB_PORT" -ge 1 && "$WEB_PORT" -le 65535 ]] || fail "--web-port must be a port number"
+
+# ------------------------------------------------------------------ 1. Docker
+title "Docker"
+if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
+  ok "docker $(docker --version | sed 's/Docker version //;s/,.*//') with compose plugin"
+else
+  ask "Install Docker Engine from Docker's apt repository?" y || fail "Docker is required"
+  . /etc/os-release
+  apt-get update -qq
+  apt-get install -y -qq ca-certificates curl gnupg >/dev/null
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL "https://download.docker.com/linux/${ID}/gpg" -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" \
+    > /etc/apt/sources.list.d/docker.list
+  apt-get update -qq
+  apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin >/dev/null
+  systemctl enable --now docker
+  ok "Docker installed"
+fi
+
+# ------------------------------------------------------------------- 2. Agent
+title "Host agent"
+getent group btcnode >/dev/null || { groupadd --system btcnode; ok "group btcnode created"; }
+install -d -m 0755 "$AGENT_LIB"
+install -m 0755 "$REPO/agent/btcnode-agent.py" "$AGENT_LIB/btcnode-agent.py"
+install -m 0644 "$REPO/agent/btcnode-agent.service" "$UNIT_DIR/btcnode-agent.service"
+systemctl daemon-reload
+systemctl enable --now btcnode-agent >/dev/null
+systemctl restart btcnode-agent
+sleep 1
+[[ -S /run/btcnode-agent/agent.sock ]] || fail "agent socket missing — journalctl -u btcnode-agent"
+ok "btcnode-agent running, socket /run/btcnode-agent/agent.sock"
+
+# ------------------------------------------------------- 3. bitcoin.conf / RPC
+title "Bitcoin Core RPC account"
+DATADIR=""
+for candidate in /mnt/bitcoin/bitcoin /var/lib/bitcoind /home/bitcoin/.bitcoin; do
+  [[ -f "$candidate/bitcoin.conf" ]] && { DATADIR="$candidate"; break; }
+done
+if [[ -z "$DATADIR" ]] && [[ -f /etc/node-dashboard.conf ]]; then
+  DATADIR="$(sed -n 's/^DATA_DIR=//p' /etc/node-dashboard.conf | tr -d "'\"")"
+fi
+[[ -n "$DATADIR" && -f "$DATADIR/bitcoin.conf" ]] || fail "bitcoin.conf not found — pass the data directory via BITCOIN_DATA_DIR=... before running"
+CONF="$DATADIR/bitcoin.conf"
+ok "bitcoin.conf: $CONF"
+
+RPC_PASSWORD=""
+# The previous dashboard's password, if this Pi ran one — nothing to re-key.
+if [[ -f /etc/node-dashboard.conf ]]; then
+  RPC_PASSWORD="$(sed -n 's/^RPC_PASSWORD=//p' /etc/node-dashboard.conf | tr -d "'\"")"
+  [[ -n "$RPC_PASSWORD" ]] && ok "reusing the RPC password from /etc/node-dashboard.conf"
+fi
+# Or the one the setup scripts stored.
+if [[ -z "$RPC_PASSWORD" && -f /etc/bitcoin-access.conf ]]; then
+  RPC_PASSWORD="$(sed -n "s/^DASH_PASS='\(.*\)'$/\1/p" /etc/bitcoin-access.conf)"
+  [[ -n "$RPC_PASSWORD" ]] && ok "reusing the RPC password from /etc/bitcoin-access.conf"
+fi
+RESTART_BITCOIND=0
+if ! grep -q '^rpcauth=dashboard:' "$CONF"; then
+  [[ -n "$RPC_PASSWORD" ]] || RPC_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+  RPCAUTH="$(python3 - "$RPC_PASSWORD" <<'PY'
+import hashlib, hmac, os, sys
+pw = sys.argv[1]; salt = os.urandom(16).hex()
+print(f"dashboard:{salt}${hmac.new(salt.encode(), pw.encode(), hashlib.sha256).hexdigest()}")
+PY
+)"
+  # Above the first [section], or a conf ending in [test] would put the
+  # account into the test network only.
+  python3 - "$CONF" "rpcauth=$RPCAUTH" <<'PY'
+import sys
+path, line = sys.argv[1], sys.argv[2]
+text = open(path).read().splitlines()
+idx = next((i for i, l in enumerate(text) if l.strip().startswith('[')), len(text))
+text.insert(idx, line)
+open(path, 'w').write('\n'.join(text) + '\n')
+PY
+  RESTART_BITCOIND=1
+  ok "rpcauth=dashboard added"
+else
+  [[ -n "$RPC_PASSWORD" ]] || fail "bitcoin.conf has an rpcauth=dashboard entry but its password is nowhere on this machine — remove the line and run again"
+  ok "rpcauth=dashboard present"
+fi
+WHITELIST="rpcwhitelist=dashboard:$RPC_METHODS"
+if grep -q '^rpcwhitelist=dashboard:' "$CONF"; then
+  if ! grep -qxF "$WHITELIST" "$CONF"; then
+    sed -i "s|^rpcwhitelist=dashboard:.*|$WHITELIST|" "$CONF"
+    RESTART_BITCOIND=1
+    ok "rpcwhitelist for dashboard renewed"
+  else
+    ok "rpcwhitelist up to date"
+  fi
+else
+  python3 - "$CONF" "$WHITELIST" "rpcwhitelistdefault=0" <<'PY'
+import sys
+path = sys.argv[1]
+text = open(path).read().splitlines()
+idx = next((i for i, l in enumerate(text) if l.strip().startswith('[')), len(text))
+for line in reversed(sys.argv[2:]):
+    if not any(l.strip() == line for l in text):
+        text.insert(idx, line)
+open(path, 'w').write('\n'.join(text) + '\n')
+PY
+  RESTART_BITCOIND=1
+  ok "rpcwhitelist for dashboard added (read-only methods only)"
+fi
+if [[ $RESTART_BITCOIND -eq 1 ]]; then
+  if ask "bitcoin.conf changed — restart bitcoind now? (a clean restart takes a minute)" n; then
+    systemctl restart bitcoind && ok "bitcoind restarted"
+  else
+    note "restart bitcoind yourself before the dashboard can log in: sudo systemctl restart bitcoind"
+  fi
+fi
+
+# ----------------------------------------------------------------- 4. Secrets
+title "Secrets"
+install -d -m 0750 "$DEPLOY/secrets"
+umask 077
+printf '%s\n' "$RPC_PASSWORD" > "$DEPLOY/secrets/rpc_password"
+if [[ ! -s "$DEPLOY/secrets/session_key" ]]; then
+  openssl rand -hex 32 > "$DEPLOY/secrets/session_key"
+  ok "session key generated"
+fi
+if [[ ! -s "$DEPLOY/secrets/admin_password_hash" ]]; then
+  if [[ -t 0 ]]; then
+    while true; do
+      read -r -s -p "  Admin password for the control panel (min. 8 characters): " P1; echo
+      read -r -s -p "  Once more: " P2; echo
+      [[ "$P1" == "$P2" && ${#P1} -ge 8 ]] && break
+      echo "  Not the same, or too short."
+    done
+    # The hash is computed by the api image itself: bcryptjs is there, on
+    # the host it is not.
+    # A plain docker build, not compose: .env does not exist yet at this point.
+    note "building the api image to hash the password (first build takes a while on a Pi)"
+    docker build --progress=plain -f "$DEPLOY/Dockerfile.api" -t btcnode-api "$REPO"
+    printf '%s' "$P1" | docker run --rm -i btcnode-api node -e '
+      const bcrypt = require("bcryptjs"); let d = "";
+      process.stdin.on("data", (c) => (d += c)).on("end", () => process.stdout.write(bcrypt.hashSync(d, 12) + "\n"));' \
+      > "$DEPLOY/secrets/admin_password_hash"
+    ok "admin password stored as bcrypt hash"
+  else
+    note "no terminal: skipping the admin password — the control panel stays off until deploy/secrets/admin_password_hash exists"
+  fi
+fi
+umask 022
+# Owned by root, readable by the api container's user (uid 1000, node) and nobody else.
+chown root:1000 "$DEPLOY/secrets" "$DEPLOY/secrets/"*
+chmod 0750 "$DEPLOY/secrets"; chmod 0640 "$DEPLOY/secrets/"*
+ok "secrets in $DEPLOY/secrets (root-owned, readable by the container user)"
+
+# -------------------------------------------------------------------- 5. TLS
+title "TLS certificate"
+install -d -m 0755 "$DEPLOY/certs"
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+if [[ ! -s "$DEPLOY/certs/btcnode.crt" ]]; then
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 3650 \
+    -subj "/CN=$(hostname)" -addext "subjectAltName=DNS:$(hostname),DNS:$(hostname).local${LAN_IP:+,IP:$LAN_IP}" \
+    -keyout "$DEPLOY/certs/btcnode.key" -out "$DEPLOY/certs/btcnode.crt" 2>/dev/null
+  chmod 0644 "$DEPLOY/certs/btcnode.crt"; chmod 0640 "$DEPLOY/certs/btcnode.key"
+  ok "self-signed certificate for $(hostname) / $LAN_IP, valid ten years"
+else
+  ok "certificate present"
+fi
+# nginx in the container runs as root for the bind, then drops to nginx — the key must be readable there.
+chmod 0644 "$DEPLOY/certs/btcnode.key"
+
+# ------------------------------------------------------------------- 6. .env
+title "Configuration"
+# Persistent journal only if the directory actually holds files: on Raspberry
+# Pi OS /var/log/journal exists but is empty and journald writes to /run.
+JOURNAL_DIR="/run/log/journal"
+[[ -n "$(ls -A /var/log/journal 2>/dev/null)" ]] && JOURNAL_DIR="/var/log/journal"
+JOURNAL_GID="$(getent group systemd-journal | cut -d: -f3)"
+AGENT_GID="$(getent group btcnode | cut -d: -f3)"
+[[ -n "$JOURNAL_GID" ]] || fail "group systemd-journal not found"
+ELECTRUM_PORT=50001
+[[ -f /etc/node-dashboard.conf ]] && ELECTRUM_PORT="$(sed -n 's/^ELECTRS_PORT=//p' /etc/node-dashboard.conf | tr -d "'\"")" && ELECTRUM_PORT="${ELECTRUM_PORT:-50001}"
+if [[ ! -f "$DEPLOY/.env" ]]; then
+  sed -e "s|^HOSTNAME=.*|HOSTNAME=$(hostname)|" \
+      -e "s|^WEB_PORT=.*|WEB_PORT=$WEB_PORT|" \
+      -e "s|^HTTP_PORT=.*|HTTP_PORT=$HTTP_PORT|" \
+      -e "s|^BITCOIN_DATA_DIR=.*|BITCOIN_DATA_DIR=$DATADIR|" \
+      -e "s|^ELECTRUM_PORT=.*|ELECTRUM_PORT=$ELECTRUM_PORT|" \
+      -e "s|^JOURNAL_DIR=.*|JOURNAL_DIR=$JOURNAL_DIR|" \
+      -e "s|^JOURNAL_GID=.*|JOURNAL_GID=$JOURNAL_GID|" \
+      -e "s|^AGENT_GID=.*|AGENT_GID=$AGENT_GID|" \
+      "$DEPLOY/.env.example" > "$DEPLOY/.env"
+  ok ".env written"
+else
+  # keep the user's choices, refresh what the machine dictates
+  sed -i -e "s|^JOURNAL_DIR=.*|JOURNAL_DIR=$JOURNAL_DIR|" -e "s|^JOURNAL_GID=.*|JOURNAL_GID=$JOURNAL_GID|" -e "s|^AGENT_GID=.*|AGENT_GID=$AGENT_GID|" "$DEPLOY/.env"
+  WEB_PORT="$(sed -n 's/^WEB_PORT=//p' "$DEPLOY/.env")"
+  HTTP_PORT="$(sed -n 's/^HTTP_PORT=//p' "$DEPLOY/.env")"
+  ok ".env kept (web port $WEB_PORT, http port $HTTP_PORT)"
+fi
+[[ -d /etc/electrs ]] || { install -d -m 0755 /etc/electrs; note "/etc/electrs created (empty) so the container can mount it"; }
+ok "journal: $JOURNAL_DIR (gid $JOURNAL_GID), agent gid $AGENT_GID"
+
+# --------------------------------------------------------------- 7. Firewall
+title "Firewall"
+if command -v ufw >/dev/null && ufw status | grep -q '^Status: active'; then
+  [[ -n "$LAN" ]] || LAN="$(ip -4 route show default | awk '{print $3}' | head -1 | awk -F. '{print $1"."$2".0.0/16"}')"
+  for port in "$WEB_PORT" "$HTTP_PORT"; do
+    # Our own rules are recognised by their comment, anchored at the line end —
+    # a bare "80/tcp" would also match 8080/tcp.
+    if ! ufw status | grep -qE "^${port}/tcp .* btcnode-web$"; then
+      ufw allow from "$LAN" to any port "$port" proto tcp comment btcnode-web >/dev/null
+      ok "ufw: port $port open for $LAN"
+    else
+      ok "ufw rule for $port present"
+    fi
+  done
+else
+  note "ufw not active — nothing to do; make sure port $WEB_PORT is reachable only from your network"
+fi
+
+# ---------------------------------------------------------------- 8. Start
+title "Containers"
+cd "$DEPLOY"
+docker compose build --progress=plain
+docker compose up -d
+for _ in $(seq 1 30); do
+  if curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true'; then break; fi
+  sleep 2
+done
+curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true' || fail "the page does not answer — docker compose -f $DEPLOY/docker-compose.yml logs"
+ok "api answers through nginx"
+
+title "Done"
+echo
+echo "  Dashboard:  https://${LAN_IP:-$(hostname)}:${WEB_PORT}/"
+echo "  The certificate is self-signed — accept the browser's warning once."
+echo "  Logs:       docker compose -f $DEPLOY/docker-compose.yml logs -f"
+echo

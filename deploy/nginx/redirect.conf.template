@@ -1,0 +1,8 @@
+# Plain HTTP only redirects to the TLS port. ${HTTP_PORT} is 8080 while an
+# old dashboard still owns port 80, and 80 afterwards.
+server {
+  listen ${HTTP_PORT};
+  listen [::]:${HTTP_PORT};
+  server_name _;
+  return 301 https://$host:${WEB_PORT}$request_uri;
+}
