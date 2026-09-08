@@ -48,16 +48,17 @@
   border-radius: 99px;
   display: block;
 }
+/* Muted on purpose: saturated red next to saturated green on a dark ground
+   seems to float above the row (chromostereopsis) though it sits exactly on
+   it — measured 2026-09-08. Mixing both with the text grey settles the row. */
 .probe.same {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 65%, var(--muted));
 }
 .probe.behind {
   background: var(--border-light);
 }
-/* No ring: the red says enough, and a translucent ring on the dark ground
-   made the dot look lifted above the row although it was not (2026-09-08). */
 .probe.ahead {
-  background: var(--error);
+  background: color-mix(in srgb, var(--error) 65%, var(--muted));
 }
 /* The card fills its half of the row: zone, card and drawing box each grow,
    the drawing itself keeps its aspect ratio and the surplus is air. */
