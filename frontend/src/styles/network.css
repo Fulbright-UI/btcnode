@@ -37,12 +37,15 @@
 .probes {
   display: inline-flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 3px;
   max-width: 40%;
 }
+/* Whole pixels on purpose: at 0.42rem the disc and the ring of a red dot
+   rounded differently, and the red one sat a pixel above the row. */
 .probe {
-  width: 0.42rem;
-  height: 0.42rem;
+  width: 7px;
+  height: 7px;
   border-radius: 99px;
   display: block;
 }
