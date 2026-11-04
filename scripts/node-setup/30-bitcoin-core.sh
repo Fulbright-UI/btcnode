@@ -168,15 +168,50 @@ ok "unattended security updates enabled"
 title "Sparing the boot medium"
 
 mkdir -p /etc/systemd/journald.conf.d
-cat > /etc/systemd/journald.conf.d/99-ram.conf <<'EOF'
+JOURNAL_SSD="${TARGET_BASE}/journal"
+if mountpoint -q "$TARGET_BASE"; then
+  # Persistent journal on the data disk: /var/log/journal is a bind mount of
+  # ${TARGET_BASE}/journal. The directory underneath on the boot medium is made
+  # immutable, so if the disk is missing journald cannot write to the card and
+  # stays in memory instead.
+  install -d -o root -g systemd-journal -m 2755 "$JOURNAL_SSD"
+  if ! findmnt -n /var/log/journal >/dev/null 2>&1; then
+    mkdir -p /var/log/journal
+    if [[ -z "$(ls -A /var/log/journal 2>/dev/null)" ]]; then
+      chattr +i /var/log/journal 2>/dev/null || true
+    fi
+  fi
+  if ! grep -qE "^${JOURNAL_SSD}[[:space:]]+/var/log/journal[[:space:]]" /etc/fstab; then
+    printf '%s\n' "# Journal on the data disk instead of the boot medium (btcnode setup)" \
+      "${JOURNAL_SSD} /var/log/journal none bind,nofail,x-systemd.requires-mounts-for=${TARGET_BASE} 0 0" \
+      >> /etc/fstab
+    systemctl daemon-reload
+  fi
+  findmnt -n /var/log/journal >/dev/null 2>&1 || mount /var/log/journal
+  rm -f /etc/systemd/journald.conf.d/99-ram.conf
+  cat > /etc/systemd/journald.conf.d/99-ssd.conf <<'EOF'
+[Journal]
+# Persistent logs, but on the data disk: /var/log/journal is a bind mount of
+# the data disk (see /etc/fstab). Without the disk the directory underneath is
+# immutable and journald stays in memory.
+Storage=persistent
+SystemMaxUse=200M
+RuntimeMaxUse=64M
+EOF
+  systemctl restart systemd-journald 2>/dev/null || true
+  journalctl --flush 2>/dev/null || true
+  ok "logs go to the data disk (${JOURNAL_SSD}, 200 MB max)"
+else
+  cat > /etc/systemd/journald.conf.d/99-ram.conf <<'EOF'
 [Journal]
 # Logs in memory instead of on the boot medium.
 # They are gone after a restart — that is intended here.
 Storage=volatile
 RuntimeMaxUse=64M
 EOF
-systemctl restart systemd-journald 2>/dev/null || true
-ok "logs go to memory (64 MB max)"
+  systemctl restart systemd-journald 2>/dev/null || true
+  ok "data disk not mounted — logs go to memory (64 MB max)"
+fi
 
 SWAPFILE="${TARGET_BASE}/swapfile"
 if swapon --show=NAME --noheadings 2>/dev/null | grep -qx "$SWAPFILE"; then
