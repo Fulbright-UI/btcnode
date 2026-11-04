@@ -204,5 +204,5 @@ jobs:
             echo "digest: \`$DIGEST\`"
             echo
             echo "tags:"
-            echo "$TAGS" | sed 's/^/- /'
+            while read -r tag; do echo "- $tag"; done <<< "$TAGS"
           } >> "$GITHUB_STEP_SUMMARY"
