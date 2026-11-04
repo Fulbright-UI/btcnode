@@ -188,6 +188,16 @@ if [[ -z "$RPC_PASSWORD" && -f /etc/bitcoin-access.conf ]]; then
   RPC_PASSWORD="$(sed -n "s/^DASH_PASS='\(.*\)'$/\1/p" /etc/bitcoin-access.conf)"
   [[ -n "$RPC_PASSWORD" ]] && ok "reusing the RPC password from /etc/bitcoin-access.conf"
 fi
+# Or the one a previous run of this installer stored — the legacy files above
+# may be gone once the old dashboard is cleaned up.
+if [[ -z "$RPC_PASSWORD" && -s "$DEPLOY/secrets/rpc_password" ]]; then
+  RPC_PASSWORD="$(head -n1 "$DEPLOY/secrets/rpc_password")"
+  [[ -n "$RPC_PASSWORD" ]] && ok "reusing the RPC password from deploy/secrets/rpc_password"
+fi
+# rpcauth=dashboard without a known password would leave the api locked out.
+if grep -q '^rpcauth=dashboard:' "$DATADIR/bitcoin.conf" && [[ -z "$RPC_PASSWORD" ]]; then
+  fail "rpcauth=dashboard is set but its password is unknown — remove that line from bitcoin.conf and run again"
+fi
 RESTART_BITCOIND=0
 if ! grep -q '^rpcauth=dashboard:' "$CONF"; then
   [[ -n "$RPC_PASSWORD" ]] || RPC_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
