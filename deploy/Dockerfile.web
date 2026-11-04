@@ -15,7 +15,7 @@ COPY shared/ shared/
 COPY frontend/ frontend/
 RUN pnpm --filter ./shared build && pnpm --filter ./frontend build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30-alpine
 COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/nginx/default.conf.template deploy/nginx/redirect.conf.template /etc/nginx/templates/
 COPY --from=build /src/frontend/dist/ /usr/share/nginx/html/
