@@ -1,12 +1,20 @@
 name: ci
 
+# Every branch and every pull request runs the same checks. The job names
+# are what branch rules point at — rename a job and the rule has to follow.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   node:
+    name: pnpm check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +31,7 @@ jobs:
       - run: pnpm build
 
   agent-and-scripts:
+    name: agent and scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +42,7 @@ jobs:
       - run: bash scripts/node-setup/tests/tor-after-sync-test.sh
 
   images:
+    name: images
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
