@@ -5,7 +5,7 @@
 | Directory   | What                                                                                                                         |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `frontend/` | The page. Vue 3, Vite, TypeScript, Pinia, vue-i18n (`en`, `de`). Own SVG components.                                         |
-| `backend/`  | Collector and API. Node 22, Fastify, TypeScript, zod. Polls the node, judges, serves.                                        |
+| `backend/`  | Collector and API. Node 26, Fastify, TypeScript, zod. Polls the node, judges, serves.                                        |
 | `shared/`   | The contract between the two: zod schemas of the status snapshot, thresholds, actions.                                       |
 | `agent/`    | The host agent: Python 3 (standard library), runs as root, knows exactly four actions and a status query.                    |
 | `deploy/`   | Docker Compose, the two Dockerfiles, nginx with TLS and a strict CSP.                                                        |
