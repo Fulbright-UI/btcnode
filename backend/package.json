@@ -32,6 +32,8 @@
   "devDependencies": {
     "@fastify/static": "^10.1.10",
     "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^4.1.12",
+    "fast-check": "^4.10.2",
     "tsx": "^4.23.15",
     "vitest": "^4.1.12"
   }

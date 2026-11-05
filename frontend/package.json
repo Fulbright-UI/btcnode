@@ -20,8 +20,10 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.10",
+    "@vitest/coverage-v8": "^4.1.12",
     "@vue/test-utils": "^2.5.1",
     "@vue/tsconfig": "^0.8.1",
+    "fast-check": "^4.10.2",
     "happy-dom": "^21.0.4",
     "vite": "^7.3.7",
     "vitest": "^4.1.12",
