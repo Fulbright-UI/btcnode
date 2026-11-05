@@ -179,16 +179,19 @@ TAG_CHECK="$(sudo -u "$ADMIN_USER" git verify-tag "v${ELECTRS_VERSION}" 2>&1 || 
 # Roman Zeyde signs with an SSH key, not with GPG. Git can verify that but
 # needs a list of trusted keys for it.
 if grep -q 'allowedSignersFile' <<<"$TAG_CHECK"; then
-    info "the tag is SSH-signed — fetching the signing key from GitHub ..."
+    info "the tag is SSH-signed, fetching the signing key from GitHub ..."
     SIGNER_FILE="${ADMIN_HOME}/.config/git/allowed_signers"
     sudo -u "$ADMIN_USER" mkdir -p "$(dirname "$SIGNER_FILE")"
-    if curl -fsSL --retry 3 https://api.github.com/users/romanz/ssh_signing_keys \
-        | python3 -c "import json,sys
+    # The key list is data, not code: save it, then read it into Python.
+    if curl -fsSL --retry 3 -o "${WORK}/romanz_keys.json" \
+            https://api.github.com/users/romanz/ssh_signing_keys \
+        && python3 -c "import json,sys
 keys = json.load(sys.stdin)
 if not keys:
     sys.exit(1)
 for k in keys:
-    print('romanz', k['key'])" > "${WORK}/allowed_signers" 2>/dev/null \
+    print('romanz', k['key'])" < "${WORK}/romanz_keys.json" \
+            > "${WORK}/allowed_signers" 2>/dev/null \
         && [[ -s "${WORK}/allowed_signers" ]]; then
         install -m 0644 -o "$ADMIN_USER" -g "$ADMIN_USER" \
             "${WORK}/allowed_signers" "$SIGNER_FILE"
