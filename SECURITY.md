@@ -33,6 +33,5 @@ under the name they choose. Anonymous reports are fine.
 
 ## Background
 
-[`docs/threat-model.md`](docs/threat-model.md) and
-[`docs/assurance-case.md`](docs/assurance-case.md) describe what the project
+[`docs/threat-model.md`](docs/threat-model.md) describes what the project
 defends against and how.

@@ -8,8 +8,6 @@ All notable changes are listed here. The format follows
 
 ### Added
 
-- `GOVERNANCE.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), a
-  roadmap and an assurance case in `docs/`.
 - `SECURITY.md` describes the handling of reports, target times and credit.
 - Tests for the update check, the agent and RPC clients, the notices, the
   stores and the Vue components. Statement coverage: backend 88 %,

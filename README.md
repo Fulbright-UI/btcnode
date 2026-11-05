@@ -56,8 +56,7 @@ cosign verify ghcr.io/fulbright-ui/btcnode-api@sha256:<digest> \
 - The page shows the onion address, all peers and the journal. Keep it on the LAN.
 
 Vulnerabilities: see [`SECURITY.md`](SECURITY.md). Threat model:
-[`docs/threat-model.md`](docs/threat-model.md), assurance case:
-[`docs/assurance-case.md`](docs/assurance-case.md).
+[`docs/threat-model.md`](docs/threat-model.md).
 
 ## Develop
 
@@ -69,8 +68,7 @@ pnpm check                     # same as the CI job
 ```
 
 More in [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`docs/`](docs/).
-Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md),
-[`GOVERNANCE.md`](GOVERNANCE.md), [`docs/roadmap.md`](docs/roadmap.md).
+Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
