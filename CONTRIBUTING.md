@@ -28,5 +28,11 @@ Security problems go through [SECURITY.md](SECURITY.md), not through issues.
 - Code formatting is Prettier and ESLint as configured; `pnpm check` tells
   you.
 
+## Conduct and decisions
+
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+Who decides what is in [GOVERNANCE.md](GOVERNANCE.md), where the project
+is heading in [docs/roadmap.md](docs/roadmap.md).
+
 By contributing you agree that your work is published under the
 [MIT license](LICENSE).
