@@ -336,13 +336,15 @@ if [[ ! -s "$DEPLOY/certs/btcnode.crt" ]]; then
   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 3650 \
     -subj "/CN=$(hostname)" -addext "subjectAltName=DNS:$(hostname),DNS:$(hostname).local${LAN_IP:+,IP:$LAN_IP}" \
     -keyout "$DEPLOY/certs/btcnode.key" -out "$DEPLOY/certs/btcnode.crt" 2>/dev/null
-  chmod 0644 "$DEPLOY/certs/btcnode.crt"; chmod 0640 "$DEPLOY/certs/btcnode.key"
+  chmod 0644 "$DEPLOY/certs/btcnode.crt"
   ok "self-signed certificate for $(hostname) / $LAN_IP, valid ten years"
 else
   ok "certificate present"
 fi
-# nginx in the container runs as root for the bind, then drops to nginx — the key must be readable there.
-chmod 0644 "$DEPLOY/certs/btcnode.key"
+# The nginx master in the container reads the key as root before the workers
+# start, so root alone is enough.
+chown root:root "$DEPLOY/certs/btcnode.key"
+chmod 0600 "$DEPLOY/certs/btcnode.key"
 
 # ------------------------------------------------------------------- 6. .env
 title "Configuration"

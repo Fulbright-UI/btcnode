@@ -135,7 +135,8 @@ jobs:
           mkdir certs
           openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
             -days 1 -subj /CN=ci -keyout certs/btcnode.key -out certs/btcnode.crt 2>/dev/null
-          chmod 0644 certs/btcnode.key
+          sudo chown root:root certs/btcnode.key
+          sudo chmod 0600 certs/btcnode.key
           touch .env
           docker compose up -d --no-deps web
           for _ in $(seq 1 30); do
