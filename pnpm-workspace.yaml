@@ -2,3 +2,10 @@ packages:
   - shared
   - backend
   - frontend
+
+# Transitive dev tools with known advisories and no fix in the line their
+# parents ask for (minimatch 10 via typescript-eslint, glob 13 via
+# js-beautify). Drop these once the parents move on.
+overrides:
+  glob@>=9 <14.0.2: ^14.0.3
+  minimatch@>=7 <11.0.1: ^11.0.4
