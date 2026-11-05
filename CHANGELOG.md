@@ -14,6 +14,16 @@ All notable changes are listed here. The format follows
 - Tests for the update check, the agent and RPC clients, the notices, the
   stores and the Vue components. Statement coverage: backend 88 %,
   frontend 99 %; the thresholds sit just below.
+- `repro` workflow with `scripts/repro-js.sh` and `scripts/repro-image.sh`:
+  builds the JavaScript and both images twice and compares them, weekly
+  and when a Dockerfile or the lockfile changes.
+
+### Changed
+
+- Images are reproducible for a given commit and package mirror state: the
+  publish job sets `SOURCE_DATE_EPOCH` from the commit and rewrites the
+  layer timestamps; build logs, the ldconfig cache, the machine-id and
+  pnpm's `.modules.yaml` are no longer part of the images.
 
 ## [4.0.0] - 2026-11-05
 
