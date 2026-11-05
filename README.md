@@ -1,6 +1,6 @@
 # btcnode
 
-[![CI](https://github.com/Fulbright-UI/btcnode/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Fulbright-UI/btcnode/actions/workflows/ci.yml?query=branch%3Amain) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Fulbright-UI/btcnode/badge)](https://scorecard.dev/viewer/?uri=github.com/Fulbright-UI/btcnode) [![License: MIT](https://img.shields.io/github/license/Fulbright-UI/btcnode)](LICENSE)
+[![CI](https://github.com/Fulbright-UI/btcnode/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Fulbright-UI/btcnode/actions/workflows/ci.yml?query=branch%3Amain) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Fulbright-UI/btcnode/badge)](https://scorecard.dev/viewer/?uri=github.com/Fulbright-UI/btcnode) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16355/badge)](https://www.bestpractices.dev/projects/16355)
 
 Dashboard and control panel for a Bitcoin full node on a Raspberry Pi.
 Bitcoin Core, electrs, Tor and I2P.
