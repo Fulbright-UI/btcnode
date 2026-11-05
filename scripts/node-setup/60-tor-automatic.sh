@@ -160,7 +160,7 @@ title "Done"
 echo "  The watchdog is armed."
 echo
 echo "  Condition   chain up to date for one hour (6 readings)"
-echo "  Then        50-tor.sh — Tor, onion service, port 8333 closed,"
+echo "  Then        50-tor.sh: Tor, onion service, port 8333 closed,"
 echo "              bitcoind restarted"
 echo "  Afterwards  the timer switches itself off"
 echo

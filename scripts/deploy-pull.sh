@@ -86,7 +86,7 @@ install_cosign() {
     "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-${arch}"
   if ! echo "$sum  $tmp" | sha256sum -c --status; then
     rm -f "$tmp"
-    fail "cosign download does not match the pinned SHA-256 — not installed"
+    fail "cosign download does not match the pinned SHA-256, not installed"
   fi
   install -m 0755 "$tmp" /usr/local/bin/cosign
   rm -f "$tmp"
@@ -101,9 +101,9 @@ fi
 if command -v cosign >/dev/null; then
   have="$(cosign version 2>/dev/null | awk '/^GitVersion:/ {print $2}')"
   ok "cosign ${have:-?} at $(command -v cosign)"
-  [[ "$have" == "$COSIGN_VERSION" ]] || note "CI signs with cosign $COSIGN_VERSION — if verifying fails, run with --install-cosign"
+  [[ "$have" == "$COSIGN_VERSION" ]] || note "CI signs with cosign $COSIGN_VERSION; if verifying fails, run with --install-cosign"
 else
-  ask "cosign is missing — install $COSIGN_VERSION (checksum-checked) to /usr/local/bin?" y \
+  ask "cosign is missing. Install $COSIGN_VERSION (checksum-checked) to /usr/local/bin?" y \
     || fail "cosign is required: sudo bash scripts/deploy-pull.sh --install-cosign"
   install_cosign
 fi
@@ -132,7 +132,7 @@ for name in "${IMAGES[@]}"; do
   if ! cosign verify "$ref" \
       --certificate-oidc-issuer "$OIDC_ISSUER" \
       --certificate-identity-regexp "$IDENTITY_REGEXP" >/dev/null; then
-    fail "$ref: no valid signature from this repository's ci workflow — nothing deployed"
+    fail "$ref: no valid signature from this repository's ci workflow, nothing deployed"
   fi
   ok "btcnode-$name:$TAG → $digest, signed by the ci workflow"
   REF[$name]="$ref"
@@ -151,7 +151,7 @@ if [[ $PULL_ONLY -eq 1 ]]; then
 fi
 
 ENV="$DEPLOY/.env"
-[[ -f "$ENV" ]] || fail "$ENV missing — run scripts/install.sh first"
+[[ -f "$ENV" ]] || fail "$ENV missing, run scripts/install.sh first"
 set_env() {
   if grep -q "^$1=" "$ENV"; then sed -i "s|^$1=.*|$1=$2|" "$ENV"; else printf '%s=%s\n' "$1" "$2" >> "$ENV"; fi
 }
@@ -178,16 +178,16 @@ healthy() {
   return 1
 }
 if healthy; then
-  ok "api answers through nginx — running ${REF[api]##*@} / ${REF[web]##*@}"
+  ok "api answers through nginx, running ${REF[api]##*@} / ${REF[web]##*@}"
   exit 0
 fi
 
 # The new images do not come up: back to what ran before, if that was known.
 if [[ -n "$OLD_API" && -n "$OLD_WEB" ]]; then
-  note "the page does not answer — going back to the previous images"
+  note "the page does not answer, going back to the previous images"
   set_env API_IMAGE "$OLD_API"
   set_env WEB_IMAGE "$OLD_WEB"
   docker compose up -d
-  healthy && fail "rolled back to $OLD_API / $OLD_WEB — the new images did not answer; docker compose logs"
+  healthy && fail "rolled back to $OLD_API / $OLD_WEB, the new images did not answer (docker compose logs)"
 fi
-fail "the page does not answer — docker compose -f $DEPLOY/docker-compose.yml logs"
+fail "the page does not answer, see: docker compose -f $DEPLOY/docker-compose.yml logs"

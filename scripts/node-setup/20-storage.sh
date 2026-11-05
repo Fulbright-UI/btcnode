@@ -143,7 +143,7 @@ echo
 
 if (( ${#DISKS[@]} > 1 )); then
     yellow "  Note: with ${#DISKS[@]} chained disks the chance of a failure doubles."
-    yellow "  Only public blockchain data lives on them — a failure costs you"
+    yellow "  Only public blockchain data lives on them. A failure costs you"
     yellow "  sync time, not money. Never keep the only copy of a wallet file"
     yellow "  there."
     echo
@@ -322,12 +322,12 @@ RA_NOW=$(blockdev --getra "$LV_PATH" 2>/dev/null || echo 99999)
 if (( RA_NOW <= 512 )); then
     ok "read-ahead: ${RA_NOW} sectors ($(( RA_NOW / 2 )) KB)"
 else
-    echo "  read-ahead is ${RA_NOW} sectors — the udev rule did not take."
+    echo "  read-ahead is ${RA_NOW} sectors. The udev rule did not take."
     echo "  by hand: blockdev --setra 256 $LV_PATH"
 fi
 OPT=$(lsblk -dnbo NAME,OPT-IO 2>/dev/null | awk '{ if ($2+0 > m) m = $2+0 } END { print m+0 }')
 if (( OPT > 1048576 )); then
-    echo "  (a disk reports ${OPT} bytes as its optimal I/O size — exactly why the rule is here.)"
+    echo "  (a disk reports ${OPT} bytes as its optimal I/O size, which is why the rule is here.)"
 fi
 
 # ================================================================ Speed test =

@@ -62,7 +62,7 @@ TIMER="tor-after-sync.timer"
 BITCOIN_USER="bitcoin"
 
 if [[ -f "$DONE" ]]; then
-    echo "already switched on $(cat "$DONE") — nothing to do"
+    echo "already switched on $(cat "$DONE"), nothing to do"
     exit 0
 fi
 
@@ -86,12 +86,12 @@ mkdir -p "$STATE_DIR"
 if grep -q '^proxy=127\.0\.0\.1:9050' "$CONF" 2>/dev/null; then
     date -Is > "$DONE"
     systemctl disable --now "$TIMER" >/dev/null 2>&1 || true
-    echo "the node already runs over Tor — timer switched off"
+    echo "the node already runs over Tor, timer switched off"
     exit 0
 fi
 
 systemctl is-active --quiet bitcoind || {
-    echo "bitcoind is not running — waiting"
+    echo "bitcoind is not running, waiting"
     exit 0; }
 
 # A node that does not answer is not a node that is behind: during the sync
@@ -126,18 +126,18 @@ if (( HAD < NEEDED )); then
 fi
 
 [[ -x "$SCRIPT" || -f "$SCRIPT" ]] || {
-    echo "${SCRIPT} is missing — run 60-tor-automatic.sh again" >&2
+    echo "${SCRIPT} is missing, run 60-tor-automatic.sh again" >&2
     exit 1; }
 
 # Marker first, call second. See the note at the top.
 date -Is > "$DONE"
-echo "chain has been up for an hour — running 50-tor.sh"
+echo "chain has been up for an hour, running 50-tor.sh"
 
 # --yes: nobody is sitting in front of this. Every question in 50-tor.sh is
 # guarded by it, and the one that matters (switching while not yet synced) is
 # exactly the condition we just spent an hour establishing.
 if bash "$SCRIPT" --yes; then
-    echo "50-tor.sh succeeded — the node now runs over Tor"
+    echo "50-tor.sh succeeded, the node now runs over Tor"
 
     # Now electrs, and only now: it needs a node that answers, and that is
     # what the restart in 50-tor.sh just gave us. 40-electrs.sh left it
@@ -145,7 +145,7 @@ if bash "$SCRIPT" --yes; then
     for UNIT in electrs electrs-lan; do
         [[ -f "${ROOT}/etc/systemd/system/${UNIT}.service" ]] || continue
         if systemctl is-enabled --quiet "$UNIT" 2>/dev/null; then
-            echo "${UNIT} was already switched on — left alone"
+            echo "${UNIT} was already switched on, left alone"
             continue
         fi
         if systemctl enable --now "$UNIT" >/dev/null 2>&1; then
@@ -154,7 +154,7 @@ if bash "$SCRIPT" --yes; then
             # Not fatal: Tor is up, which was the point. But say it, because
             # a wallet that cannot reach its server is what gets noticed, and
             # the cause is here.
-            echo "${UNIT} did not start — look: systemctl status ${UNIT}" >&2
+            echo "${UNIT} did not start, see: systemctl status ${UNIT}" >&2
         fi
     done
 

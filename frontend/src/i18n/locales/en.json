@@ -79,7 +79,7 @@
     "rpcAdvice": "The node is running but rejects a call. The method may be missing from {whitelist}.",
     "backendDownTitle": "Dashboard backend not reachable",
     "backendDownBody": "The page cannot fetch new data. Last successful update {age}.",
-    "logUnitMissing": "No systemd unit {unit} found — the log panel stays empty."
+    "logUnitMissing": "No systemd unit {unit} found. The log panel stays empty."
   },
   "band": {
     "days": "days",
@@ -221,7 +221,7 @@
     "queryingPeers": "querying peers",
     "queryingNote": "The node has not delivered the peer list yet. During the initial sync that occasionally takes longer than the timeout.",
     "deniedShort": "drawing follows once the method is allowed",
-    "deniedNote": "The network drawing needs the {method} call — add it to the node's rpcwhitelist.",
+    "deniedNote": "The network drawing needs the {method} call. Add it to the node's rpcwhitelist.",
     "fallbackConnections": "Connections",
     "fallbackVersion": "Version",
     "blockAnnounced": "Block {n} · announced {when} by {peer}",
@@ -251,7 +251,7 @@
     "logout": "Log out",
     "password": "Admin password",
     "wrongPassword": "Wrong password",
-    "tooMany": "Too many attempts — wait a minute",
+    "tooMany": "Too many attempts. Wait a minute",
     "unavailable": "Control is not reachable right now",
     "restartBitcoind": "Restart bitcoind",
     "restartElectrs": "Restart electrs",

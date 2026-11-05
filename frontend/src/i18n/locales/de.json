@@ -79,7 +79,7 @@
     "rpcAdvice": "Der Node läuft, lehnt aber eine Abfrage ab. Möglicherweise fehlt der Befehl in der {whitelist}.",
     "backendDownTitle": "Dashboard-Backend nicht erreichbar",
     "backendDownBody": "Die Seite bekommt keine neuen Daten. Letzte erfolgreiche Aktualisierung {age}.",
-    "logUnitMissing": "Keine systemd-Unit {unit} gefunden — das Protokoll bleibt leer."
+    "logUnitMissing": "Keine systemd-Unit {unit} gefunden. Das Protokoll bleibt leer."
   },
   "band": {
     "days": "Tage",
@@ -221,7 +221,7 @@
     "queryingPeers": "Gegenstellen werden abgefragt",
     "queryingNote": "Der Node hat die Liste der Gegenstellen noch nicht geliefert. Während der Synchronisation dauert das gelegentlich länger als das Zeitlimit.",
     "deniedShort": "Zeichnung folgt nach der Freischaltung",
-    "deniedNote": "Die Netzgrafik braucht die Abfrage {method} — in die rpcwhitelist des Nodes eintragen.",
+    "deniedNote": "Die Netzgrafik braucht die Abfrage {method}. Bitte in die rpcwhitelist des Nodes eintragen.",
     "fallbackConnections": "Verbindungen",
     "fallbackVersion": "Version",
     "blockAnnounced": "Block {n} · angekündigt {when} von {peer}",
@@ -251,7 +251,7 @@
     "logout": "Abmelden",
     "password": "Admin-Passwort",
     "wrongPassword": "Falsches Passwort",
-    "tooMany": "Zu viele Versuche — eine Minute warten",
+    "tooMany": "Zu viele Versuche. Bitte eine Minute warten",
     "unavailable": "Steuerung ist gerade nicht erreichbar",
     "restartBitcoind": "bitcoind neu starten",
     "restartElectrs": "electrs neu starten",

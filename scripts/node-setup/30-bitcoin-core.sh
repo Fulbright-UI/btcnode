@@ -5,7 +5,7 @@
 # What happens:
 #   - update the system, switch on unattended security updates
 #   - set up the firewall (ufw) and fail2ban
-#   - spare the SD card: logs into RAM, swap onto the data disk
+#   - spare the SD card: journal and swap onto the data disk
 #   - download Bitcoin Core, verify checksum AND developer signatures
 #   - create the service user "bitcoin" without login rights
 #   - write a bitcoin.conf matched to the available memory
@@ -141,7 +141,7 @@ CORES="$(nproc)"
 if (( RAM_MB >= 4096 )); then DBCACHE=1024
 else                          DBCACHE=450
 fi
-ok "RAM ${RAM_MB} MB, ${CORES} cores — dbcache ${DBCACHE} MB (Core's default)"
+ok "RAM ${RAM_MB} MB, ${CORES} cores, dbcache ${DBCACHE} MB (Core's default)"
 
 # ============================================================ System packages =
 title "System packages"
@@ -210,7 +210,7 @@ Storage=volatile
 RuntimeMaxUse=64M
 EOF
   systemctl restart systemd-journald 2>/dev/null || true
-  ok "data disk not mounted — logs go to memory (64 MB max)"
+  ok "data disk not mounted, logs go to memory (64 MB max)"
 fi
 
 SWAPFILE="${TARGET_BASE}/swapfile"
@@ -229,7 +229,7 @@ elif mountpoint -q "$TARGET_BASE"; then
     grep -q "$SWAPFILE" /etc/fstab || echo "$SWAPFILE none swap sw,nofail 0 0" >> /etc/fstab
     ok "2 GB swap file on the data disk active"
 else
-    warn "no separate data volume — swap left untouched"
+    warn "no separate data volume, swap left untouched"
 fi
 
 sysctl -qw vm.swappiness=10
@@ -269,7 +269,7 @@ EOF
         ok "SSH password login disabled (your key stays valid)"
     else
         rm -f /etc/ssh/sshd_config.d/99-node-hardening.conf
-        warn "the SSH configuration would have been faulty — change rolled back"
+        warn "the SSH configuration would have been faulty, change rolled back"
     fi
 else
     # Never lock somebody out of their own machine. Without a key on file,
@@ -591,7 +591,7 @@ if ! systemctl is-active --quiet bitcoind; then
     exit 1
 fi
 I="$(bitcoin-cli getblockchaininfo 2>/dev/null)" || {
-    echo "Node is still starting or loading index files — try again in a few minutes."
+    echo "Node is still starting or loading index files. Try again in a few minutes."
     exit 0; }
 awk -v p="$(jq -r .verificationprogress <<<"$I")" \
     'BEGIN { printf "Progress      %.2f %%\n", p*100 }'
@@ -622,7 +622,7 @@ echo "    journalctl -u bitcoind -f       follow the log"
 echo "    sudo systemctl stop bitcoind    stop it cleanly"
 echo
 yellow "  The initial sync typically takes 3 to 10 days on a Raspberry Pi 4."
-yellow "  Never pull the plug — always 'sudo systemctl stop bitcoind' or 'sudo reboot'."
+yellow "  Never pull the plug. Always use 'sudo systemctl stop bitcoind' or 'sudo reboot'."
 echo
 echo "Next steps:"
 echo "    sudo bash 40-electrs.sh          Electrum server for your wallet"

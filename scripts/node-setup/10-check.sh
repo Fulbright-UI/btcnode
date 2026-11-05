@@ -39,7 +39,7 @@ MODEL=""
 ok "kernel: $(uname -r), architecture: $(uname -m)"
 
 case "$(uname -m)" in
-    aarch64|x86_64) ok "64-bit — good" ;;
+    aarch64|x86_64) ok "64-bit, good" ;;
     *) red "  32-bit system. Bitcoin Core needs 64 bit."; note_problem ;;
 esac
 
@@ -105,7 +105,7 @@ ROOT_DISK="$(lsblk -no PKNAME "$ROOT_SOURCE" 2>/dev/null | head -1 || true)"
 # something destructive when it cannot see is worse than no check.
 CANDIDATES=()
 if [[ -z "$ROOT_DISK" ]]; then
-    warn "could not determine the system disk — no suggestions will be made"
+    warn "could not determine the system disk, no suggestions will be made"
 else
     ok "system disk: /dev/${ROOT_DISK} (the scripts never touch it)"
     while read -r NAME TYPE; do
@@ -127,7 +127,7 @@ if (( ${#CANDIDATES[@]} > 0 )); then
         info "free for the chain: $D (${GB} GB)"
     done
     if (( TOTAL >= 900 )); then
-        ok "${TOTAL} GB together — enough for the full archive"
+        ok "${TOTAL} GB together, enough for the full archive"
     elif (( TOTAL > 0 )); then
         yellow "  ${TOTAL} GB together. The full chain needs about 900 GB."
         yellow "  Below that, 30-bitcoin-core.sh will offer pruning: the node"
@@ -167,7 +167,7 @@ if command -v curl >/dev/null 2>&1; then
     if [[ -n "$PUBLIC_IP" && -n "$LOCAL_IP" ]]; then
         info "public address: $PUBLIC_IP"
         if [[ "$PUBLIC_IP" != "$LOCAL_IP" ]]; then
-            info "you are behind NAT — normal for a home connection"
+            info "you are behind NAT, normal for a home connection"
             info "if inbound IPv4 turns out to be impossible (CGNAT, DS-Lite),"
             info "50-tor.sh solves it with an onion service"
         fi

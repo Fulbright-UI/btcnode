@@ -104,7 +104,7 @@ fi
 ok "Bitcoin Core supports I2P"
 
 if grep -q '^onlynet=' "$CONF"; then
-    ok "onlynet= is set — I2P will be added to it, clearnet stays off"
+    ok "onlynet= is set. I2P will be added to it, clearnet stays off"
     RESTRICTED=1
 else
     yellow "  bitcoin.conf has no onlynet= line. The node currently talks in"
@@ -126,7 +126,7 @@ if ! command -v i2pd >/dev/null 2>&1; then
     apt-get install -y -qq i2pd >/dev/null
 fi
 ok "i2pd installed: $(i2pd --version 2>/dev/null | head -1 || echo '?')"
-[[ -f "$I2PD_CONF" ]] || { red "  $I2PD_CONF not found — the package looks different from Debian's."; exit 1; }
+[[ -f "$I2PD_CONF" ]] || { red "  $I2PD_CONF not found. The package looks different from Debian's."; exit 1; }
 
 # i2pd.conf is an INI file. Sections are edited in place — appending a second
 # [sam] would make i2pd refuse the file — and every run leaves the same

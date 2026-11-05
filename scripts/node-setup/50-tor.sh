@@ -213,7 +213,7 @@ while :; do
     [[ "$NR" =~ ^[0-9]+$ ]] || break
     ufw --force delete "$NR" >/dev/null 2>&1 || break
 done
-ok "port 8333 closed — inbound now runs entirely over Tor"
+ok "port 8333 closed, inbound now runs entirely over Tor"
 
 # ================================================================= Restart ===
 title "Restarting"
@@ -274,7 +274,7 @@ echo "      bitcoin-cli getpeerinfo | jq -r '.[].network' | sort | uniq -c"
 echo "  Only 'onion' should appear there."
 echo
 yellow "  Expect fewer connections than before and slightly slower block"
-yellow "  propagation. For the security of your node that is irrelevant — it"
+yellow "  propagation. For the security of your node that is irrelevant: it"
 yellow "  still verifies every block itself."
 echo
 echo "  To undo:  sudo bash 50-tor.sh --revert"

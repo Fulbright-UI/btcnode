@@ -114,7 +114,7 @@ else
   [[ -n "$BITCOIND_CONTAINER" ]] || BITCOIND_CONTAINER="$(find_container 'bitcoin|btc')"
   if [[ -n "$BITCOIND_CONTAINER" ]]; then
     docker inspect "$BITCOIND_CONTAINER" >/dev/null 2>&1 || fail "no container named $BITCOIND_CONTAINER"
-    ask "bitcoind seems to run in the container '$BITCOIND_CONTAINER' — use it?" y \
+    ask "bitcoind seems to run in the container '$BITCOIND_CONTAINER'. Use it?" y \
       || fail "tell me which one: sudo BITCOIND_CONTAINER=name bash scripts/install.sh"
     ok "bitcoind: container $BITCOIND_CONTAINER"
     AGENT_CONTAINERS="bitcoind=$BITCOIND_CONTAINER"
@@ -123,7 +123,7 @@ else
     # works through RPC and the data directory, only the restart button is
     # not offered and the log comes from debug.log if there is one.
     NODE_UNMANAGED=1
-    note "no bitcoind unit and no container found — using RPC and the data directory only;"
+    note "no bitcoind unit and no container found, using RPC and the data directory only;"
     note "the page will not offer a bitcoind restart (BITCOIND_CONTAINER=name if it is a container with an unusual name)"
   fi
 fi
@@ -159,7 +159,7 @@ systemctl daemon-reload
 systemctl enable --now btcnode-agent >/dev/null
 systemctl restart btcnode-agent
 sleep 1
-[[ -S /run/btcnode-agent/agent.sock ]] || fail "agent socket missing — journalctl -u btcnode-agent"
+[[ -S /run/btcnode-agent/agent.sock ]] || fail "agent socket missing, see: journalctl -u btcnode-agent"
 ok "btcnode-agent running, socket /run/btcnode-agent/agent.sock"
 
 # ------------------------------------------------------- 3. bitcoin.conf / RPC
@@ -174,7 +174,7 @@ if [[ -z "$DATADIR" && -n "$BITCOIND_CONTAINER" ]]; then
     [[ -n "$src" && -f "$src/bitcoin.conf" ]] && { DATADIR="$src"; break; }
     [[ -n "$src" && -f "$src/.bitcoin/bitcoin.conf" ]] && { DATADIR="$src/.bitcoin"; break; }
   done < <(docker inspect -f '{{range .Mounts}}{{if eq .Type "bind"}}{{.Source}}{{"\n"}}{{end}}{{end}}' "$BITCOIND_CONTAINER")
-  [[ -n "$DATADIR" ]] || fail "the container's bind mounts hold no bitcoin.conf — run as: sudo BITCOIN_DATA_DIR=/path/on/host bash scripts/install.sh"
+  [[ -n "$DATADIR" ]] || fail "the container's bind mounts hold no bitcoin.conf. Run as: sudo BITCOIN_DATA_DIR=/path/on/host bash scripts/install.sh"
 fi
 for candidate in /mnt/bitcoin/bitcoin /var/lib/bitcoind /home/bitcoin/.bitcoin /data/bitcoin; do
   [[ -z "$DATADIR" ]] || break
@@ -183,7 +183,7 @@ done
 if [[ -z "$DATADIR" ]] && [[ -f /etc/node-dashboard.conf ]]; then
   DATADIR="$(sed -n 's/^DATA_DIR=//p' /etc/node-dashboard.conf | tr -d "'\"")"
 fi
-[[ -n "$DATADIR" && -f "$DATADIR/bitcoin.conf" ]] || fail "bitcoin.conf not found — run as:  sudo BITCOIN_DATA_DIR=/path/to/datadir bash scripts/install.sh"
+[[ -n "$DATADIR" && -f "$DATADIR/bitcoin.conf" ]] || fail "bitcoin.conf not found. Run as:  sudo BITCOIN_DATA_DIR=/path/to/datadir bash scripts/install.sh"
 CONF="$DATADIR/bitcoin.conf"
 ok "bitcoin.conf: $CONF"
 
@@ -206,7 +206,7 @@ if [[ -z "$RPC_PASSWORD" && -s "$DEPLOY/secrets/rpc_password" ]]; then
 fi
 # rpcauth=dashboard without a known password would leave the api locked out.
 if grep -q '^rpcauth=dashboard:' "$DATADIR/bitcoin.conf" && [[ -z "$RPC_PASSWORD" ]]; then
-  fail "rpcauth=dashboard is set but its password is unknown — remove that line from bitcoin.conf and run again"
+  fail "rpcauth=dashboard is set but its password is unknown. Remove that line from bitcoin.conf and run again"
 fi
 RESTART_BITCOIND=0
 if ! grep -q '^rpcauth=dashboard:' "$CONF"; then
@@ -230,7 +230,7 @@ PY
   RESTART_BITCOIND=1
   ok "rpcauth=dashboard added"
 else
-  [[ -n "$RPC_PASSWORD" ]] || fail "bitcoin.conf has an rpcauth=dashboard entry but its password is nowhere on this machine — remove the line and run again"
+  [[ -n "$RPC_PASSWORD" ]] || fail "bitcoin.conf has an rpcauth=dashboard entry but its password is nowhere on this machine. Remove the line and run again"
   ok "rpcauth=dashboard present"
 fi
 WHITELIST="rpcwhitelist=dashboard:$RPC_METHODS"
@@ -263,8 +263,8 @@ if [[ $RESTART_BITCOIND -eq 1 ]]; then
     RESTART_CMD="systemctl restart bitcoind"
   fi
   if (( NODE_UNMANAGED == 1 )); then
-    note "restart bitcoind yourself, however you started it — the new RPC account works only after that"
-  elif ask "bitcoin.conf changed — restart bitcoind now? (a clean restart takes a minute)" n; then
+    note "restart bitcoind yourself, however you started it. The new RPC account works only after that"
+  elif ask "bitcoin.conf changed. Restart bitcoind now? (a clean restart takes a minute)" n; then
     $RESTART_CMD >/dev/null && ok "bitcoind restarted"
   else
     note "restart bitcoind yourself before the dashboard can log in: sudo $RESTART_CMD"
@@ -278,11 +278,11 @@ RPC_PORT="$(sed -n 's/^rpcport=//p' "$CONF" | head -1)"; RPC_PORT="${RPC_PORT:-8
 if python3 -c "import socket,sys; s=socket.socket(); s.settimeout(3); sys.exit(0 if s.connect_ex(('127.0.0.1', $RPC_PORT)) == 0 else 1)"; then
   ok "RPC answers on 127.0.0.1:$RPC_PORT"
 elif [[ -n "$BITCOIND_CONTAINER" ]]; then
-  fail "nothing listens on 127.0.0.1:$RPC_PORT — publish the container's RPC port on localhost (-p 127.0.0.1:$RPC_PORT:$RPC_PORT, or network_mode: host) and run again"
+  fail "nothing listens on 127.0.0.1:$RPC_PORT. Publish the container's RPC port on localhost (-p 127.0.0.1:$RPC_PORT:$RPC_PORT, or network_mode: host) and run again"
 elif (( NODE_UNMANAGED == 1 )); then
-  fail "nothing listens on 127.0.0.1:$RPC_PORT and I do not know how bitcoind runs here — start it, then run again"
+  fail "nothing listens on 127.0.0.1:$RPC_PORT and I do not know how bitcoind runs here. Start it, then run again"
 else
-  note "nothing listens on 127.0.0.1:$RPC_PORT yet — fine if bitcoind is still starting"
+  note "nothing listens on 127.0.0.1:$RPC_PORT yet, fine if bitcoind is still starting"
 fi
 
 # ----------------------------------------------------------------- 4. Secrets
@@ -311,7 +311,7 @@ if [[ ! -s "$DEPLOY/secrets/admin_password_hash" ]]; then
     else
       note "fetching the signed api image to hash the password"
       HASH_IMAGE="$(deploy_pull --pull-only | sed -n 's/^API_IMAGE=//p')"
-      [[ -n "$HASH_IMAGE" ]] || fail "no verified api image — see above, or run with --build"
+      [[ -n "$HASH_IMAGE" ]] || fail "no verified api image, see above or run with --build"
     fi
     printf '%s' "$P1" | docker run --rm -i "$HASH_IMAGE" node -e '
       const bcrypt = require("bcryptjs"); let d = "";
@@ -319,7 +319,7 @@ if [[ ! -s "$DEPLOY/secrets/admin_password_hash" ]]; then
       > "$DEPLOY/secrets/admin_password_hash"
     ok "admin password stored as bcrypt hash"
   else
-    note "no terminal: skipping the admin password — the control panel stays off until deploy/secrets/admin_password_hash exists"
+    note "no terminal: skipping the admin password. The control panel stays off until deploy/secrets/admin_password_hash exists"
   fi
 fi
 umask 022
@@ -366,10 +366,10 @@ if [[ -n "$BITCOIND_CONTAINER" || $NODE_UNMANAGED -eq 1 ]]; then
     DATA_GID="$(stat -c %g "$DEBUG_LOG")"
     if [[ "$(stat -c %a "$DEBUG_LOG")" =~ ^[0-9][0-3] ]]; then
       # the group may not read it: 0600 and the like
-      note "$DEBUG_LOG is not group-readable — the log stays empty until: sudo chmod g+r $DEBUG_LOG (and g+x on $DATADIR)"
+      note "$DEBUG_LOG is not group-readable. The log stays empty until: sudo chmod g+r $DEBUG_LOG (and g+x on $DATADIR)"
     fi
   else
-    note "$DEBUG_LOG not found — the log panel stays empty until bitcoind writes it"
+    note "$DEBUG_LOG not found. The log panel stays empty until bitcoind writes it"
   fi
 fi
 if [[ ! -f "$DEPLOY/.env" ]]; then
@@ -412,7 +412,7 @@ if command -v ufw >/dev/null && ufw status | grep -q '^Status: active'; then
     fi
   done
 else
-  note "ufw not active — nothing to do; make sure port $WEB_PORT is reachable only from your network"
+  note "ufw not active, nothing to do. Make sure port $WEB_PORT is reachable only from your network"
 fi
 
 # ---------------------------------------------------------------- 8. Start
@@ -429,7 +429,7 @@ if [[ $BUILD_LOCAL -eq 1 ]]; then
     if curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true'; then break; fi
     sleep 2
   done
-  curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true' || fail "the page does not answer — docker compose -f $DEPLOY/docker-compose.yml logs"
+  curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true' || fail "the page does not answer, see: docker compose -f $DEPLOY/docker-compose.yml logs"
   ok "api answers through nginx (images built from this checkout)"
 else
   # verifies the signatures, writes the digests into .env, starts, checks the page
@@ -439,6 +439,6 @@ fi
 title "Done"
 echo
 echo "  Dashboard:  https://${LAN_IP:-$(hostname)}$([[ "$WEB_PORT" == 443 ]] || echo ":$WEB_PORT")/"
-echo "  The certificate is self-signed — accept the browser's warning once."
+echo "  The certificate is self-signed. Accept the browser's warning once."
 echo "  Logs:       docker compose -f $DEPLOY/docker-compose.yml logs -f"
 echo

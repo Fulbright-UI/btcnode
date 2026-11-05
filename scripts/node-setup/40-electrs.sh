@@ -145,10 +145,10 @@ if apt-get install -y -qq librocksdb-dev >/dev/null 2>&1; then
     ROCKS_VER="$(dpkg-query -W -f='${Version}' librocksdb-dev 2>/dev/null || true)"
     if [[ "$ROCKS_VER" == 9.10.0* ]]; then
         ROCKS=1
-        ok "librocksdb-dev ${ROCKS_VER} — will be linked dynamically"
+        ok "librocksdb-dev ${ROCKS_VER}, will be linked dynamically"
     else
         warn "librocksdb-dev ${ROCKS_VER} does not match electrs ${ELECTRS_VERSION} (expects 9.10.0)"
-        warn "Building statically instead — that takes longer."
+        warn "Building statically instead, which takes longer."
     fi
 fi
 (( ROCKS == 0 )) && info "static build: expect 40 to 70 minutes on a Pi"
@@ -238,7 +238,7 @@ elif grep -qi "No public key\|can't check signature" <<<"$TAG_CHECK"; then
         yellow "  The signature could not be confirmed."
         echo "$TAG_CHECK" | sed 's/^/    /'
         echo
-        yellow "  That need not mean anything bad — the key may simply be missing."
+        yellow "  That need not mean anything bad; the key may simply be missing."
         yellow "  Compare the fingerprint above with the one Roman Zeyde publishes"
         yellow "  on his GitHub profile before you continue."
         confirm "Continue?" || exit 0
@@ -265,7 +265,7 @@ else
 fi
 
 BINARY="$BUILDDIR/electrs/target/release/electrs"
-[[ -x "$BINARY" ]] || { red "  build failed — no executable was produced."; exit 1; }
+[[ -x "$BINARY" ]] || { red "  build failed, no executable was produced."; exit 1; }
 install -m 0755 -o root -g root "$BINARY" /usr/local/bin/electrs
 ok "electrs installed in /usr/local/bin"
 /usr/local/bin/electrs --version | sed 's/^/  /'
@@ -409,7 +409,7 @@ if (( SYNCED == 1 )); then
         exit 1
     fi
 else
-    warn "electrs is installed but NOT started — the chain is not up yet"
+    warn "electrs is installed but NOT started, the chain is not up yet"
     info "60-tor-automatic.sh switches it on, or do it yourself once synced:"
     info "    sudo systemctl enable --now electrs"
 fi
@@ -507,7 +507,7 @@ EOF
         info "Tor encrypts and authenticates the connection by itself."
         info "No port forwarding needed, no fixed IP needed."
     else
-        warn "onion address not generated yet — look later at:"
+        warn "onion address not generated yet. Look later at:"
         warn "  sudo cat /var/lib/tor/electrs/hostname"
     fi
 fi
