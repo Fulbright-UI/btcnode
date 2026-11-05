@@ -11,6 +11,8 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'pnpm --filter ./backend mock',
+    cwd: '..',
+    stdout: 'pipe',
     url: 'http://127.0.0.1:3000/api/health',
     timeout: 60_000,
     reuseExistingServer: !process.env.CI,
