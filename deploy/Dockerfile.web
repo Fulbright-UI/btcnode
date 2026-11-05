@@ -26,6 +26,8 @@ RUN pnpm --filter ./shared build && pnpm --filter ./frontend build
 
 # nginx:1.31-alpine
 FROM nginx:1.31-alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606
+# Alpine fixes land before the next nginx image does.
+RUN apk upgrade --no-cache
 COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/nginx/default.conf.template deploy/nginx/redirect.conf.template /etc/nginx/templates/
 COPY --from=build /src/frontend/dist/ /usr/share/nginx/html/

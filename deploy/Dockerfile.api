@@ -29,9 +29,11 @@ RUN pnpm --filter ./shared build && pnpm --filter ./backend build \
 FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9
 # journalctl lives in the systemd package on Debian; it reads the host's
 # journal files mounted read-only, nothing else of systemd runs here.
+# npm is not needed at runtime and brings its own outdated dependencies.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends systemd ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /app
 COPY --from=build --chown=node:node /out/ ./
 ENV NODE_ENV=production HOST=127.0.0.1 PORT=3000
