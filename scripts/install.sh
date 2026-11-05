@@ -137,7 +137,7 @@ else
     ok "Electrum server: container $ELECTRS_CONTAINER"
     AGENT_CONTAINERS="${AGENT_CONTAINERS:+$AGENT_CONTAINERS,}electrs=$ELECTRS_CONTAINER"
   else
-    note "no Electrum server found — the page will say so; see README, section Electrum server"
+    note "no Electrum server found, the page will say so; set one up with scripts/node-setup/40-electrs.sh, containers: docs/install.md"
   fi
 fi
 
