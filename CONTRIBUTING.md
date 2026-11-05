@@ -11,8 +11,8 @@ Security problems go through [SECURITY.md](SECURITY.md), not through issues.
 ## Pull requests
 
 - One topic per pull request, based on the latest `main`.
-- Commits are signed (SSH or GPG). `main` takes signed commits and a linear
-  history only, so a pull request is rebased, not merged.
+- Commits are signed (SSH or GPG). Pull requests are squash merged; the PR
+  title becomes the commit subject, so it follows the style below.
 - CI must be green. Run `pnpm check` before you push; it is the same as the
   CI job of that name. See [docs/development.md](docs/development.md).
 - New functions come with tests. Pure functions get a property test with

@@ -9,6 +9,7 @@ All notable changes are listed here. The format follows
 ### Added
 
 - `SECURITY.md` describes the handling of reports, target times and credit.
+- A roadmap and an assurance case in `docs/`.
 - Tests for the update check, the agent and RPC clients, the notices, the
   stores and the Vue components. Statement coverage: backend 88 %,
   frontend 99 %; the thresholds sit just below.
