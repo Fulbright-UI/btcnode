@@ -11,11 +11,13 @@
 #   5. a self-signed TLS certificate
 #   6. deploy/.env from what it finds on this machine
 #   7. a firewall rule for the web port, home network only
-#   8. builds and starts the two containers, then checks the page answers
+#   8. pulls the two signed images from GHCR — scripts/deploy-pull.sh, which
+#      checks their cosign signatures first — starts them, checks the page
+#      answers. With --build it builds them from this checkout instead.
 #
 # Repeatable: running it twice changes nothing that is already right.
 #
-# Usage:  sudo bash scripts/install.sh [--web-port 443] [--http-port 80] [--lan 192.168.0.0/16] [--yes]
+# Usage:  sudo bash scripts/install.sh [--web-port 443] [--http-port 80] [--lan 192.168.0.0/16] [--build] [--yes]
 #         sudo BITCOIN_DATA_DIR=/path/to/datadir bash scripts/install.sh   (if it is not found)
 #         sudo BITCOIND_CONTAINER=name bash scripts/install.sh           (bitcoind in Docker, if not detected)
 #
@@ -32,6 +34,7 @@ WEB_PORT=443
 HTTP_PORT=80
 LAN=""
 ASSUME_YES=0
+BUILD_LOCAL=0
 RPC_METHODS="getblockchaininfo,getnetworkinfo,getmempoolinfo,uptime,getpeerinfo,getblockstats,getnetworkhashps,estimatesmartfee"
 
 while [[ $# -gt 0 ]]; do
@@ -39,8 +42,9 @@ while [[ $# -gt 0 ]]; do
     --web-port) WEB_PORT="${2:?--web-port needs a value}"; shift 2 ;;
     --http-port) HTTP_PORT="${2:?--http-port needs a value}"; shift 2 ;;
     --lan) LAN="${2:?--lan needs a value}"; shift 2 ;;
+    --build) BUILD_LOCAL=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -56,6 +60,12 @@ ask() {
   if [[ $ASSUME_YES -eq 1 || ! -t 0 ]]; then [[ "$d" == y ]]; return; fi
   read -r -p "  $q [$([[ $d == y ]] && echo Y/n || echo y/N)] " a
   a="${a:-$d}"; [[ "$a" =~ ^[Yy] ]]
+}
+deploy_pull() {
+  # the signed images from GHCR; deploy-pull.sh verifies before it pulls
+  local yes=()
+  [[ $ASSUME_YES -eq 1 ]] && yes=(--yes)
+  bash "$REPO/scripts/deploy-pull.sh" "${yes[@]}" "$@"
 }
 
 [[ $EUID -eq 0 ]] || fail "run as root: sudo bash scripts/install.sh"
@@ -293,11 +303,17 @@ if [[ ! -s "$DEPLOY/secrets/admin_password_hash" ]]; then
       echo "  Not the same, or too short."
     done
     # The hash is computed by the api image itself: bcryptjs is there, on
-    # the host it is not.
-    # A plain docker build, not compose: .env does not exist yet at this point.
-    note "building the api image to hash the password (first build takes a while on a Pi)"
-    docker build --progress=plain -f "$DEPLOY/Dockerfile.api" -t btcnode-api "$REPO"
-    printf '%s' "$P1" | docker run --rm -i btcnode-api node -e '
+    # the host it is not. Plain docker, not compose: .env does not exist yet.
+    if [[ $BUILD_LOCAL -eq 1 ]]; then
+      note "building the api image to hash the password (first build takes a while on a Pi)"
+      docker build --progress=plain -f "$DEPLOY/Dockerfile.api" -t btcnode-api "$REPO"
+      HASH_IMAGE="btcnode-api"
+    else
+      note "fetching the signed api image to hash the password"
+      HASH_IMAGE="$(deploy_pull --pull-only | sed -n 's/^API_IMAGE=//p')"
+      [[ -n "$HASH_IMAGE" ]] || fail "no verified api image — see above, or run with --build"
+    fi
+    printf '%s' "$P1" | docker run --rm -i "$HASH_IMAGE" node -e '
       const bcrypt = require("bcryptjs"); let d = "";
       process.stdin.on("data", (c) => (d += c)).on("end", () => process.stdout.write(bcrypt.hashSync(d, 12) + "\n"));' \
       > "$DEPLOY/secrets/admin_password_hash"
@@ -401,15 +417,24 @@ fi
 
 # ---------------------------------------------------------------- 8. Start
 title "Containers"
-cd "$DEPLOY"
-docker compose build --progress=plain
-docker compose up -d
-for _ in $(seq 1 30); do
-  if curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true'; then break; fi
-  sleep 2
-done
-curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true' || fail "the page does not answer — docker compose -f $DEPLOY/docker-compose.yml logs"
-ok "api answers through nginx"
+if [[ $BUILD_LOCAL -eq 1 ]]; then
+  # local names in .env, so plain `docker compose` keeps using these builds
+  for kv in API_IMAGE=btcnode-api WEB_IMAGE=btcnode-web; do
+    if grep -q "^${kv%%=*}=" "$DEPLOY/.env"; then sed -i "s|^${kv%%=*}=.*|$kv|" "$DEPLOY/.env"; else echo "$kv" >> "$DEPLOY/.env"; fi
+  done
+  cd "$DEPLOY"
+  docker compose -f docker-compose.yml -f docker-compose.build.yml build --progress=plain
+  docker compose up -d
+  for _ in $(seq 1 30); do
+    if curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true'; then break; fi
+    sleep 2
+  done
+  curl -sk "https://127.0.0.1:${WEB_PORT}/api/health" | grep -q '"ok":true' || fail "the page does not answer — docker compose -f $DEPLOY/docker-compose.yml logs"
+  ok "api answers through nginx (images built from this checkout)"
+else
+  # verifies the signatures, writes the digests into .env, starts, checks the page
+  deploy_pull
+fi
 
 title "Done"
 echo

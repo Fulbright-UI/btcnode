@@ -5,15 +5,18 @@
 # be opened for a bridge. The web container is the only listener anyone
 # else sees. Everything the api reads from the host is mounted read-only.
 #
-#   cp .env.example .env   # then edit
-#   docker compose up -d --build
+# The images come from GHCR, pinned by digest in .env (API_IMAGE, WEB_IMAGE).
+# scripts/deploy-pull.sh writes those two lines, and only after cosign has
+# checked that this repository's CI signed exactly those digests:
+#
+#   sudo bash ../scripts/deploy-pull.sh
+#
+# To build from the checkout instead, add docker-compose.build.yml. Without
+# API_IMAGE/WEB_IMAGE the names fall back to the locally built ones.
 
 services:
   api:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.api
-    image: btcnode-api
+    image: ${API_IMAGE:-btcnode-api}
     container_name: btcnode-api
     network_mode: host
     restart: unless-stopped
@@ -61,10 +64,7 @@ services:
       - ALL
 
   web:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.web
-    image: btcnode-web
+    image: ${WEB_IMAGE:-btcnode-web}
     container_name: btcnode-web
     network_mode: host
     restart: unless-stopped

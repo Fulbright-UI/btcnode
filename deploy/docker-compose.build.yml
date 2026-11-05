@@ -1,0 +1,21 @@
+# Fallback: build both images from this checkout instead of pulling the
+# signed ones from GHCR — for development, or when GHCR is out of reach.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# The images are then called btcnode-api and btcnode-web; set API_IMAGE and
+# WEB_IMAGE in .env to those names (sudo bash scripts/install.sh --build does
+# it), or remove the two lines. scripts/deploy-pull.sh switches back.
+
+services:
+  api:
+    image: btcnode-api
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+
+  web:
+    image: btcnode-web
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
