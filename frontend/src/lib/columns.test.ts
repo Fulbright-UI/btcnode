@@ -49,3 +49,24 @@ describe('tiers and skeletons', () => {
     expect(pts[2]).toBe('600.0,18.0');
   });
 });
+
+describe('degenerate input', () => {
+  it('draws a flat series as minimal bars instead of dividing by zero', () => {
+    const rects = layoutColumns([0, 0, 0]);
+    expect(rects.map((r) => r.height)).toEqual([0.8, 0.8, 0.8]);
+    const atFloor = layoutColumns([30, 30], { floor: 30 });
+    expect(atFloor.every((r) => Number.isFinite(r.y) && r.height === 0.8)).toBe(true);
+  });
+
+  it('honours a custom box size', () => {
+    const rects = layoutColumns([1, 2], { width: 100, height: 10 });
+    expect(rects[1]!.height).toBe(10);
+    expect(rects[1]!.x + rects[1]!.width).toBeLessThanOrEqual(100);
+  });
+
+  it('gives no curve for fewer than two values and a flat bottom line for zeros', () => {
+    expect(curvePoints([], 100, 50)).toBe('');
+    expect(curvePoints([5], 100, 50)).toBe('');
+    expect(curvePoints([0, 0], 100, 50)).toBe('0.0,47.5 100.0,47.5');
+  });
+});
