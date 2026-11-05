@@ -58,6 +58,8 @@ watch(
     <div class="log-box">
       <pre
         ref="pre"
+        tabindex="0"
+        :aria-label="t('cards.log')"
       ><code><template v-for="(l, i) in lines" :key="i"><span class="log-line" :class="l.kind">{{ l.before }}<b v-if="l.mark" class="highlight">{{ l.mark }}</b>{{ l.after }}</span>{{ i < lines.length - 1 ? '\n' : '' }}</template></code></pre>
     </div>
   </section>
