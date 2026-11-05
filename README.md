@@ -30,7 +30,7 @@ browser ──443──► nginx (web container) ──► static page (Vue)
 | `shared/`   | The contract between the two: zod schemas of the status snapshot, thresholds, actions. |
 | `agent/`    | The host agent: Python 3 (standard library), runs as root, knows exactly four actions. |
 | `deploy/`   | Docker Compose, the two Dockerfiles, nginx with TLS and a strict CSP.                 |
-| `scripts/`  | `install.sh` for the dashboard; `node-setup/` builds the node itself (disk, Core, electrs, Tor). |
+| `scripts/`  | `install.sh` and `deploy-pull.sh` for the dashboard; `node-setup/` builds the node itself (disk, Core, electrs, Tor). |
 
 ## Install on the Pi
 
@@ -47,6 +47,8 @@ creates a read-only RPC account in `bitcoin.conf` (or reuses the one an
 earlier dashboard had), asks for an admin password, makes a self-signed
 certificate, writes `deploy/.env`, opens the port for the home network only,
 and starts the containers on **https://<pi>/** (443, with 80 redirecting).
+The containers come as signed images from GHCR (next section); `--build`
+builds them on the Pi from the checkout instead.
 If something else already serves those ports, pass `--web-port 8443
 --http-port 8080`.
 It looks for `bitcoin.conf` in the usual places (`/mnt/bitcoin/bitcoin`,
@@ -71,6 +73,39 @@ says so), and a group-readable `debug.log` in the data directory, which then
 replaces the journal as the log source (`LOG_SOURCE=file`). An Electrum
 server in a container (`electrs`, `fulcrum`, `electrumx`) is picked up the
 same way; without one the page says so.
+
+### Images, signatures, updates
+
+CI builds both images for `linux/arm64` and, from `main` and version tags,
+publishes them as `ghcr.io/fulbright-ui/btcnode-api` and
+`ghcr.io/fulbright-ui/btcnode-web` (tags `main`, `sha-<commit>`, and the
+version for tags). Each image is signed with cosign — keyless: the
+certificate names this repository's `ci.yml` workflow — and carries an SBOM
+(SPDX) and SLSA build provenance.
+
+The Pi deploys with
+
+```bash
+sudo bash scripts/deploy-pull.sh            # tag main; --tag sha-1234567 for a given commit
+```
+
+which resolves the tag to a digest, checks the signature of exactly that
+digest, and only then writes the digests into `deploy/.env`, pulls and
+restarts; if the page does not come back it returns to the previous digests.
+It installs cosign itself when it is missing: a pinned release, checked
+against its SHA-256 (`--install-cosign` does only that). The check, by hand:
+
+```bash
+cosign verify ghcr.io/fulbright-ui/btcnode-api@sha256:<digest> \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github\.com/Fulbright-UI/btcnode/\.github/workflows/ci\.yml@refs/(heads/main|tags/v[0-9]+\.[0-9]+\.[0-9]+)$'
+```
+
+The attestations can also be read with
+`gh attestation verify oci://ghcr.io/fulbright-ui/btcnode-api@sha256:<digest> -R Fulbright-UI/btcnode`.
+To build on the Pi instead: `sudo bash scripts/install.sh --build`, or
+`docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`
+in `deploy/`.
 
 Language: the page follows the browser, `?lang=de` / `?lang=en` overrides,
 the footer remembers the choice.
@@ -108,6 +143,11 @@ pnpm --filter ./backend mock       # a full dashboard against a mock node on htt
 pnpm --filter ./frontend dev       # Vite dev server, proxies /api to :3000
 pnpm check                         # lint, typecheck, tests, build — what CI runs
 ```
+
+CI (`.github/workflows/ci.yml`) runs on every branch and pull request:
+`pnpm check`, `agent and scripts`, `workflow lint`, `image api (linux/arm64)`,
+`image web (linux/arm64)`; `publish api` / `publish web` only on `main` and
+tags. Actions are pinned by commit SHA, base images by digest.
 
 `MOCK_SCENARIO=syncing` or `empty` shows the initial sync and an empty node.
 The mock is a real HTTP JSON-RPC server with Basic Auth, and unknown methods
