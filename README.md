@@ -55,7 +55,8 @@ cosign verify ghcr.io/fulbright-ui/btcnode-api@sha256:<digest> \
 - CSP without inline script or style.
 - The page shows the onion address, all peers and the journal. Keep it on the LAN.
 
-Vulnerabilities: see [`SECURITY.md`](SECURITY.md).
+Vulnerabilities: see [`SECURITY.md`](SECURITY.md). Threat model:
+[`docs/threat-model.md`](docs/threat-model.md).
 
 ## Develop
 
@@ -66,7 +67,7 @@ pnpm --filter ./backend mock   # dashboard against a mock node on :3000
 pnpm check                     # same as the CI job
 ```
 
-More in [`docs/`](docs/).
+More in [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`docs/`](docs/).
 
 ## License
 

@@ -91,8 +91,8 @@ joins two host groups (`systemd-journal` to read the log, `btcnode` for the
 agent socket) plus, for a bitcoind in a container, the group that owns the
 data directory, and mounts the journal, the data directory (for the
 disk figure; the chain itself stays unreadable) and the agent socket. The
-RPC account may call eight read-only methods; `rpcwhitelistdefault=0` blocks
-the rest. The agent is the only privilege on the host: it accepts four fixed
+RPC account may call eight read-only methods and nothing else;
+`rpcwhitelistdefault=0` leaves other RPC accounts as they were. The agent is the only privilege on the host: it accepts four fixed
 actions and a status query over a group-protected Unix socket and refuses
 everything else. No unit name, no argument, no shell ever comes from the
 network. The control routes sit behind a bcrypt password, a server-side
