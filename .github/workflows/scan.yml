@@ -1,0 +1,122 @@
+name: scan
+
+# Findings go to code scanning (Security tab). Trivy looks for known
+# vulnerabilities and misconfigurations in the repository and, once a day,
+# in the published images; hadolint checks the Dockerfiles; gitleaks looks
+# for secrets in the whole history. The tools run from images pinned by
+# digest or from a release checked against its SHA-256.
+#
+# No pull requests: uploading results needs security-events write, which
+# pull requests from forks and Dependabot do not get.
+on:
+  push:
+    branches: [main, 'sam/**']
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  trivy-repo:
+    name: trivy (repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # aquasec/trivy:0.76.1
+      - run: >-
+          docker run --rm -v "$PWD:/src" -w /src
+          aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+          fs --scanners vuln,misconfig --severity HIGH,CRITICAL --ignore-unfixed
+          --exit-code 1 --format sarif --output trivy-repo.sarif .
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        if: always()
+        with:
+          sarif_file: trivy-repo.sarif
+          category: trivy-repo
+
+  trivy-images:
+    name: trivy (image ${{ matrix.image }})
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # aquasec/trivy:0.76.1
+      - run: >-
+          docker run --rm -v "$PWD:/src" -w /src
+          aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+          image --platform linux/arm64 --image-src remote
+          --severity HIGH,CRITICAL --ignore-unfixed
+          --exit-code 1 --format sarif --output trivy-${{ matrix.image }}.sarif
+          ghcr.io/fulbright-ui/btcnode-${{ matrix.image }}:main
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: trivy-image-${{ matrix.image }}
+
+  hadolint:
+    name: hadolint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # hadolint/hadolint:v2.15.1, reads .hadolint.yaml
+      - run: >-
+          docker run --rm -v "$PWD:/src" -w /src
+          hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
+          /bin/hadolint --format sarif deploy/Dockerfile.api deploy/Dockerfile.web
+          > hadolint.sarif
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        if: always()
+        with:
+          sarif_file: hadolint.sarif
+          category: hadolint
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: install gitleaks
+        env:
+          VERSION: 8.30.1
+          SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLo gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+      - run: >-
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner
+          --report-format sarif --report-path gitleaks.sarif .
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        if: always()
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks

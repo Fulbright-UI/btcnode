@@ -1,0 +1,5 @@
+# DL3008 (pin apt package versions): the base image is pinned by digest,
+# and a pinned Debian package version breaks the build as soon as the
+# mirror drops it. apt-get takes the current security release instead.
+ignored:
+  - DL3008
