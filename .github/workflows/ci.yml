@@ -98,8 +98,40 @@ jobs:
           file: deploy/Dockerfile.${{ matrix.image }}
           platforms: linux/arm64
           push: false
+          load: ${{ matrix.image == 'web' }}
+          tags: btcnode-${{ matrix.image }}:ci
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      # The web container with the restrictions of docker-compose.yml
+      # (read-only, four capabilities) has to start and serve the page.
+      - name: start web as compose runs it
+        if: matrix.image == 'web'
+        working-directory: deploy
+        env:
+          WEB_IMAGE: btcnode-web:ci
+          JOURNAL_GID: '1'
+          AGENT_GID: '2'
+        run: |
+          mkdir certs
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
+            -days 1 -subj /CN=ci -keyout certs/btcnode.key -out certs/btcnode.crt 2>/dev/null
+          chmod 0644 certs/btcnode.key
+          touch .env
+          docker compose up -d --no-deps web
+          for _ in $(seq 1 30); do
+            curl -fsk -o /dev/null https://127.0.0.1/ && break
+            sleep 1
+          done
+          curl -fsk https://127.0.0.1/ | grep -q 'id="app"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/)" = 301
+      - name: web container log
+        if: always() && matrix.image == 'web'
+        working-directory: deploy
+        env:
+          WEB_IMAGE: btcnode-web:ci
+          JOURNAL_GID: '1'
+          AGENT_GID: '2'
+        run: docker compose logs web || true
 
   publish:
     name: publish ${{ matrix.image }}
