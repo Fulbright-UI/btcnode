@@ -3,14 +3,16 @@ version: 2
 # Weekly version updates, one grouped pull request per ecosystem. Security
 # updates are not grouped and come as single pull requests right away.
 # A release has to be a week old before a version update picks it up.
+#
+# npm has no cooldown: Dependabot hands it to pnpm as minimum-release-age,
+# which pnpm applies to the whole workspace. A security minimum younger
+# than a week in any package.json then blocks every update of the run.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
       day: monday
-    cooldown:
-      default-days: 7
     groups:
       npm:
         patterns: ['*']
