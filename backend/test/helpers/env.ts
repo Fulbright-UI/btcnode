@@ -35,8 +35,16 @@ export interface TestEnv {
 /** A fake electrs: Electrum protocol on one port, Prometheus metrics on another. */
 async function fakeElectrs(state: { running: boolean; height: number }) {
   const tcp = createTcpServer((sock) => {
+    sock.on('error', () => {});
     sock.on('data', (chunk) => {
-      const req = JSON.parse(chunk.toString()) as { id: number; method: string };
+      let req: { id: number; method: string };
+      try {
+        req = JSON.parse(chunk.toString()) as typeof req;
+      } catch {
+        // a stray probe of the port on a developer machine, not a client
+        sock.destroy();
+        return;
+      }
       const result =
         req.method === 'server.version'
           ? ['electrs/0.11.1', '1.4']

@@ -2,7 +2,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import type { Server } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 /**
  * A fake host agent on a Unix socket that records what it was asked.
@@ -12,7 +12,11 @@ import { join } from 'node:path';
 export async function fakeAgent(opts: { electrs?: 'active' | 'missing' } = {}) {
   const electrs = opts.electrs ?? 'active';
   const dir = await mkdtemp(join(tmpdir(), 'agent-'));
-  const path = join(dir, 'agent.sock');
+  // node on Windows listens on named pipes instead of Unix sockets
+  const path =
+    process.platform === 'win32'
+      ? `\\\\.\\pipe\\btcnode-${basename(dir)}`
+      : join(dir, 'agent.sock');
   const asked: string[] = [];
   const server: Server = createServer((sock) => {
     sock.on('data', (chunk) => {
