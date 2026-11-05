@@ -14,6 +14,8 @@ export default defineConfig({
       include: ['src/**/*.{ts,vue}'],
       exclude: ['src/**/*.test.ts'],
       reporter: ['text-summary'],
+      // just below the measured values; raise them as tests are added
+      thresholds: { statements: 10, branches: 6, functions: 10, lines: 11 },
     },
   },
 });

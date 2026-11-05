@@ -11,6 +11,8 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts'],
       reporter: ['text-summary'],
+      // just below the measured values; raise them as tests are added
+      thresholds: { statements: 67, branches: 58, functions: 65, lines: 70 },
     },
   },
 });
