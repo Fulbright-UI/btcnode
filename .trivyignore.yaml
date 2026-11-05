@@ -1,0 +1,8 @@
+misconfigurations:
+  - id: DS-0002
+    paths:
+      - deploy/Dockerfile.web
+    statement: >-
+      The nginx master needs root to bind 80 and 443 and drops the workers to
+      the nginx user. docker-compose.yml keeps four capabilities and a
+      read-only root for it.
