@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `GOVERNANCE.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), a
+  roadmap and an assurance case in `docs/`.
+- `SECURITY.md` describes the handling of reports, target times and credit.
+
 ## [4.0.0] - 2026-11-05
 
 First tagged release.
