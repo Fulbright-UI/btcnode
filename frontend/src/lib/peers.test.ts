@@ -30,14 +30,23 @@ describe('peerSummary', () => {
     expect(s.averageLatency).toBe(40);
     expect(s.fastest).toBe(40);
     // the onion and i2p peers answer in 42 ms, the ipv6 one in 80
-    expect(s.ownResponse).toBeCloseTo((42 + 42 + 80) / 3);
+    expect(s.latency.map((l) => [l.network, l.medianMs])).toEqual(
+      expect.arrayContaining([
+        ['onion', 42],
+        ['i2p', 42],
+        ['ipv6', 80],
+      ]),
+    );
+    expect(s.latency).toHaveLength(3);
 
     const withFastElectrs = peerSummary([
       peer({ network: 'electrs', latencyMs: 0, currentPingMs: 0 }),
       peer({ latencyMs: 100, currentPingMs: 120 }),
     ]);
     expect(withFastElectrs.fastest).toBe(100);
-    expect(withFastElectrs.ownResponse).toBe(120);
+    expect(withFastElectrs.latency).toEqual([
+      { network: 'ipv4', peers: 1, medianMs: 120, slow: false },
+    ]);
   });
 
   it('skips unknown latencies and has no figures without measurements', () => {
@@ -46,7 +55,7 @@ describe('peerSummary', () => {
       peer({ latencyMs: 30, currentPingMs: null }),
     ]);
     expect(s.averageLatency).toBe(30);
-    expect(s.ownResponse).toBeNull();
+    expect(s.latency).toEqual([]);
 
     expect(peerSummary([])).toEqual({
       total: 0,
@@ -54,7 +63,7 @@ describe('peerSummary', () => {
       byNetwork: [],
       averageLatency: null,
       fastest: null,
-      ownResponse: null,
+      latency: [],
     });
   });
 

@@ -61,7 +61,7 @@
     "electrumStopped": "Electrum server: stopped",
     "electrumNotResponding": "Electrum server: not responding",
     "electrumIndexing": "Electrum index: {blocks} blocks to go",
-    "ownResponseSlow": "Own response time: {ms} ms",
+    "peerLatencySlow": "Ping {network} (median): {ms} ms",
     "updatesAvailable": "Updates available"
   },
   "notices": {
@@ -193,7 +193,7 @@
     "unknown": "unknown",
     "averageRoundTrip": "Average round trip",
     "fastest": "fastest",
-    "ownResponse": "own response time",
+    "pingMedian": "ping {network} (median)",
     "mapAria": "Network of the {n} connected nodes",
     "thisNode": "this node",
     "torInbound": "Tor · inbound",

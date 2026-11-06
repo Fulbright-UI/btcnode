@@ -48,7 +48,9 @@ describe('NetworkMapCard with peers', () => {
       '1 I2P',
       '40 ms Average round trip',
       '40 ms fastest',
-      '55 ms own response time',
+      '42 ms ping Tor (median)',
+      '80 ms ping IPv6 (median)',
+      '42 ms ping I2P (median)',
     ]);
     expect(w.find('.network-figures .warn').exists()).toBe(false);
     expect(w.findComponent(ChainCheck).exists()).toBe(true);
@@ -67,15 +69,18 @@ describe('NetworkMapCard with peers', () => {
     expect(w.find('.peer-detail .hint').exists()).toBe(true);
   });
 
-  it('flags a slow own response and hides the chain check while syncing', () => {
+  it('flags a slow network and hides the chain check while syncing', () => {
     const s = snapshot();
     const { w } = render(
       snapshot({
         node: { ...s.node!, inSync: false },
-        peers: { list: [peer({ currentPingMs: 2500, latencyMs: null })], total: 1 },
+        peers: {
+          list: [1, 2, 3].map((id) => peer({ id, currentPingMs: 2500, latencyMs: null })),
+          total: 3,
+        },
       }),
     );
-    expect(w.find('.network-figures .warn').text()).toBe('2.5 s own response time');
+    expect(w.find('.network-figures .warn').text()).toBe('2.5 s ping IPv4 (median)');
     expect(w.findComponent(ChainCheck).exists()).toBe(false);
     // no link latency known: neither average nor fastest
     expect(figures(w).some((f) => f.includes('fastest'))).toBe(false);

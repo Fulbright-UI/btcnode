@@ -21,8 +21,10 @@ export const THRESHOLDS = {
   connectionsMin: 8,
   /** Mempool usage over maxmempool: cheap transactions start being dropped */
   mempoolFullWarn: 0.8,
-  /** Mean round trip to peers above this says our node is overloaded (ms) */
-  ownResponseWarnMs: 2000,
+  /** Median ping per network above this is slow (ms). Tor and I2P take several hops. */
+  peerLatencyWarnMs: { ipv4: 1000, ipv6: 1000, cjdns: 1000, onion: 3000, i2p: 5000 },
+  /** Below this many measured peers a network's median is not judged */
+  peerLatencyMinPeers: 3,
   /** Fee tiers for the 24-hour bars in sat/vB: up to the first, up to the second, above */
   feeTiers: [2, 5] as const,
   /** Volume tiers relative to the 24-hour mean: below, up to twice, above */

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { THRESHOLDS } from '@btcnode/shared';
 import type { Peer } from '@btcnode/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -80,11 +79,9 @@ const legend = computed(() => [
         <span v-if="summary.fastest !== null"
           ><b>{{ format.latency(summary.fastest) }}</b> {{ t('network.fastest') }}</span
         >
-        <span
-          v-if="summary.ownResponse !== null"
-          :class="{ warn: summary.ownResponse > THRESHOLDS.ownResponseWarnMs }"
-        >
-          <b>{{ format.latency(summary.ownResponse) }}</b> {{ t('network.ownResponse') }}
+        <span v-for="l in summary.latency" :key="l.network" :class="{ warn: l.slow }">
+          <b>{{ format.latency(l.medianMs) }}</b>
+          {{ t('network.pingMedian', { network: labels.networkName(l.network) }) }}
         </span>
         <ChainCheck
           v-if="snapshot && inSync"
