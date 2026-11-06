@@ -1,4 +1,4 @@
-import { THRESHOLDS } from '@btcnode/shared';
+import { THRESHOLDS, peerLatency } from '@btcnode/shared';
 import type { StatusSnapshot, Warning } from '@btcnode/shared';
 
 type Facts = Pick<
@@ -57,13 +57,12 @@ export function collectWarnings(f: Facts): Warning[] {
     }
   }
 
-  const pings = f.peers.list
-    .filter((p) => p.network !== 'electrs' && p.currentPingMs !== null)
-    .map((p) => p.currentPingMs as number);
-  if (pings.length) {
-    const mean = pings.reduce((a, b) => a + b, 0) / pings.length;
-    if (mean > THRESHOLDS.ownResponseWarnMs)
-      w.push({ code: 'ownResponseSlow', params: { ms: Math.round(mean) } });
+  for (const l of peerLatency(f.peers.list)) {
+    if (l.slow)
+      w.push({
+        code: 'peerLatencySlow',
+        params: { network: l.network, ms: Math.round(l.medianMs) },
+      });
   }
 
   if (f.updates?.entries.some((u) => u.outdated)) w.push({ code: 'updatesAvailable' });

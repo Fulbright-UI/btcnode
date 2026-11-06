@@ -81,7 +81,10 @@ describe('notices', () => {
     };
     f.node!.connections.total = 3;
     f.node!.mempool.usage = 290;
-    f.peers.list = [{ network: 'ipv4', currentPingMs: 2500 }] as StatusSnapshot['peers']['list'];
+    f.peers.list = [2500, 2600, 900].map((ms) => ({
+      network: 'ipv4',
+      currentPingMs: ms,
+    })) as StatusSnapshot['peers']['list'];
     f.updates!.entries = [{ name: 'electrs', installed: '1', latest: '2', outdated: true }];
     expect(collectWarnings(f)).toEqual([
       { code: 'chainCheckAhead', params: { blocks: 2 } },
@@ -92,7 +95,7 @@ describe('notices', () => {
       { code: 'power' },
       { code: 'connections', params: { value: 3 } },
       { code: 'mempoolFull' },
-      { code: 'ownResponseSlow', params: { ms: 2500 } },
+      { code: 'peerLatencySlow', params: { network: 'ipv4', ms: 2500 } },
       { code: 'updatesAvailable' },
     ]);
   });

@@ -19,6 +19,11 @@ All notable changes are listed here. The format follows
 
 ### Changed
 
+- The ping notice judges each network on its own: median per network,
+  limits of 1 s for IPv4, IPv6 and CJDNS, 3 s for Tor and 5 s for I2P, and
+  only with at least three measured peers. It was the mean over all peers
+  and called "own response time", so one stalled I2P peer could raise it.
+  The warning code is now `peerLatencySlow` with `network` and `ms`.
 - Images are reproducible for a given commit and package mirror state: the
   publish job sets `SOURCE_DATE_EPOCH` from the commit and rewrites the
   layer timestamps; build logs, the ldconfig cache, the machine-id and

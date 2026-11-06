@@ -23,7 +23,7 @@ export const warningCodeSchema = z.enum([
   'electrumStopped',
   'electrumNotResponding',
   'electrumIndexing',
-  'ownResponseSlow',
+  'peerLatencySlow',
   'updatesAvailable',
 ]);
 export type WarningCode = z.infer<typeof warningCodeSchema>;

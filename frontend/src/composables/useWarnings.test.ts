@@ -17,6 +17,13 @@ describe('useWarnings', () => {
     expect(w.text({ code: 'power' })).toBe('Power supply: irregular');
   });
 
+  it('names the network of a slow ping', () => {
+    const w = withSetup(useWarnings, 'de');
+    expect(w.text({ code: 'peerLatencySlow', params: { network: 'onion', ms: 3400 } })).toBe(
+      'Ping Tor (Median): 3400 ms',
+    );
+  });
+
   it('translates into German', () => {
     const w = withSetup(useWarnings, 'de');
     expect(w.text({ code: 'mempoolFull' })).toBe('Mempool fast voll');
@@ -27,7 +34,10 @@ describe('useWarnings', () => {
     for (const locale of ['en', 'de'] as const) {
       const w = withSetup(useWarnings, locale);
       for (const code of warningCodeSchema.options) {
-        const text = w.text({ code, params: { value: 1, percent: 2, blocks: 3, ms: 4 } });
+        const text = w.text({
+          code,
+          params: { value: 1, percent: 2, blocks: 3, ms: 4, network: 'i2p' },
+        });
         expect(text).not.toContain('warnings.');
         expect(text).not.toMatch(/\{\w+\}/);
       }
