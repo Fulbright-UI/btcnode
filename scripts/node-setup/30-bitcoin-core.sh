@@ -16,7 +16,7 @@
 #
 # Options:
 #   --datadir PATH   where the chain goes. Default /mnt/bitcoin/bitcoin
-#   --version 31.1   a different Bitcoin Core version
+#   --version 31.2   a different Bitcoin Core version
 #   --prune 600000   keep only ~600 GB of blocks
 #   --tor            also talk over Tor (50-tor.sh does this properly later)
 #   --no-upnp        no automatic port forwarding in the router
@@ -26,7 +26,7 @@
 
 set -euo pipefail
 
-VERSION="31.1"
+VERSION="31.2"
 DATADIR="/mnt/bitcoin/bitcoin"
 PRUNE_MB=0
 WITH_TOR=0
