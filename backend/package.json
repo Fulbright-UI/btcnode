@@ -30,7 +30,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@fastify/static": "^10.1.10",
+    "@fastify/static": "^10.1.11",
     "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^4.1.12",
     "fast-check": "^4.10.2",
