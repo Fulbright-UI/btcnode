@@ -138,12 +138,15 @@ watch(
 <template>
   <div class="term quote" :class="{ typing }">
     <span class="typed">
-      <span class="part-date">{{ parts[0] }}</span
-      ><span v-if="cursorAt === 0" class="cursor"></span>
-      <span class="part-who">{{ parts[1] }}</span
-      ><span v-if="cursorAt === 1" class="cursor"></span>
-      <span class="part-text">{{ parts[2] }}</span
-      ><span v-if="cursorAt === 2" class="cursor"></span>
+      <span class="part-date">{{ parts[0] }}</span><span
+        v-if="cursorAt === 0"
+        class="cursor"
+      ></span>
+      <span class="part-who">{{ parts[1] }}</span><span v-if="cursorAt === 1" class="cursor"></span>
+      <span class="part-text">{{ parts[2] }}</span><span
+        v-if="cursorAt === 2"
+        class="cursor"
+      ></span>
     </span>
   </div>
 </template>
