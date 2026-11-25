@@ -19,6 +19,9 @@ All notable changes are listed here. The format follows
 
 ### Changed
 
+- `30-bitcoin-core.sh` installs Bitcoin Core 32.1 and no longer writes the
+  `upnp` option, which Core dropped in version 29. `--no-upnp` is still
+  accepted and has no effect.
 - The ping notice judges each network on its own: median per network,
   limits of 1 s for IPv4, IPv6 and CJDNS, 3 s for Tor and 5 s for I2P, and
   only with at least three measured peers. It was the mean over all peers

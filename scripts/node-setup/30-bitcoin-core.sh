@@ -16,21 +16,20 @@
 #
 # Options:
 #   --datadir PATH   where the chain goes. Default /mnt/bitcoin/bitcoin
-#   --version 31.3   a different Bitcoin Core version
+#   --version 32.1   a different Bitcoin Core version
 #   --prune 600000   keep only ~600 GB of blocks
 #   --tor            also talk over Tor (50-tor.sh does this properly later)
-#   --no-upnp        no automatic port forwarding in the router
+#   --no-upnp        accepted and ignored, Core no longer has UPnP
 #   --yes            no questions; accept the defaults
 #
 # Repeatable: running it twice upgrades in place and keeps your credentials.
 
 set -euo pipefail
 
-VERSION="31.3"
+VERSION="32.1"
 DATADIR="/mnt/bitcoin/bitcoin"
 PRUNE_MB=0
 WITH_TOR=0
-UPNP=1
 MIN_SIGNATURES=3
 BITCOIN_USER="bitcoin"
 BASE_URL="https://bitcoincore.org/bin"
@@ -50,7 +49,7 @@ while [[ $# -gt 0 ]]; do
         --version) VERSION="${2:-}"; shift 2 ;;
         --prune)   PRUNE_MB="${2:-}"; shift 2 ;;
         --tor)     WITH_TOR=1; shift ;;
-        --no-upnp) UPNP=0; shift ;;
+        --no-upnp) warn "--no-upnp has no effect: Core dropped UPnP in version 29"; shift ;;
         --yes)     ASSUME_YES=1; shift ;;
         -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
         *) red "Unknown option: $1"; exit 1 ;;
@@ -431,7 +430,6 @@ maxmempool=${MAXMEMPOOL}
 listen=1
 maxconnections=40
 # Deliberately limited on a small machine: every connection costs memory
-upnp=${UPNP}
 EOF
 
 if (( PRUNE_MB > 0 )); then
