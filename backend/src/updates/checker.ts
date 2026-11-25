@@ -13,6 +13,8 @@ import { portOpen } from '../util/exec.js';
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 const FETCH_TIMEOUT_MS = 45_000;
+/** Upper bound for any answer; protects against a source that never stops. */
+const MAX_ANSWER_CHARS = 2_000_000;
 
 export interface UpdateCheckerOptions {
   rpc: BitcoinRpcClient;
@@ -48,8 +50,18 @@ function normalize(v: string): string {
   return v.replace(/(\.0)+$/, '');
 }
 
-function fetchText(url: string, agent?: Agent): Promise<string> {
+/**
+ * GET a text body, at most MAX_ANSWER_CHARS of it. With `enough`, reading
+ * stops as soon as the text so far answers the question: the Bitcoin Core
+ * feed is 2.8 MB, and the newest release is in its first item.
+ */
+function fetchText(
+  url: string,
+  agent?: Agent,
+  enough?: (textSoFar: string) => boolean,
+): Promise<string> {
   return new Promise((resolve, reject) => {
+    let done = false;
     const req = httpsRequest(
       url,
       {
@@ -65,9 +77,18 @@ function fetchText(url: string, agent?: Agent): Promise<string> {
         }
         let body = '';
         res.setEncoding('utf8');
+        // hanging up early makes the response emit an error nobody needs
+        res.on('error', () => {});
         res.on('data', (c: string) => {
+          if (done) return;
           body += c;
-          if (body.length > 2_000_000) req.destroy(new Error('answer too large'));
+          if (enough?.(body)) {
+            done = true;
+            resolve(body);
+            req.destroy();
+          } else if (body.length > MAX_ANSWER_CHARS) {
+            req.destroy(new Error('answer too large'));
+          }
         });
         res.on('end', () => resolve(body));
       },
@@ -76,6 +97,16 @@ function fetchText(url: string, agent?: Agent): Promise<string> {
     req.on('error', reject);
     req.end();
   });
+}
+
+/** The first release title after the channel title; the feed lists the newest first. */
+function newestCoreVersion(feed: string): string | null {
+  const titles = [...feed.matchAll(/<title>(.*?)<\/title>/gs)].map((m) => m[1]!);
+  for (const t of titles.slice(1)) {
+    const v = versionFromText(t);
+    if (v) return v;
+  }
+  return null;
 }
 
 const githubRelease = z.object({ tag_name: z.string() });
@@ -178,12 +209,12 @@ export class UpdateChecker {
 
   private async latestCore(agent?: Agent): Promise<string | null> {
     try {
-      const xml = await fetchText('https://bitcoincore.org/en/releasesrss.xml', agent);
-      const titles = [...xml.matchAll(/<title>(.*?)<\/title>/gs)].map((m) => m[1]!);
-      for (const t of titles.slice(1)) {
-        const v = versionFromText(t);
-        if (v) return v;
-      }
+      const xml = await fetchText(
+        'https://bitcoincore.org/en/releasesrss.xml',
+        agent,
+        (text) => newestCoreVersion(text) !== null,
+      );
+      return newestCoreVersion(xml);
     } catch (err) {
       this.opts.log.warn({ err }, 'could not fetch Bitcoin Core releases');
     }
