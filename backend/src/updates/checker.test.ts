@@ -10,15 +10,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BitcoinRpcClient } from '../rpc/client.js';
 
 /** What the fake https answers per URL: a body, an HTTP error, or a socket error. */
-const answers = new Map<string, { status?: number; body?: string; error?: string }>();
+const answers = new Map<
+  string,
+  { status?: number; body?: string; chunks?: string[]; error?: string }
+>();
 const requested: { url: string; agent: unknown }[] = [];
+/** Characters the fake server handed out before the client hung up. */
+let delivered = 0;
 
 vi.mock('node:https', () => ({
   request: (url: string, opts: { agent?: unknown }, onResponse: (res: unknown) => void) => {
     requested.push({ url, agent: opts.agent });
+    let hungUp = false;
     const req = Object.assign(new EventEmitter(), {
       setTimeout: () => req,
-      destroy: (err: Error) => req.emit('error', err),
+      destroy: (err?: Error) => {
+        hungUp = true;
+        if (err) req.emit('error', err);
+      },
       end: () => {
         const a = answers.get(url) ?? { error: 'ENOTFOUND' };
         setImmediate(() => {
@@ -30,8 +39,12 @@ vi.mock('node:https', () => ({
           });
           onResponse(res);
           if ((a.status ?? 200) < 400) {
-            res.emit('data', a.body ?? '');
-            res.emit('end');
+            for (const chunk of a.chunks ?? [a.body ?? '']) {
+              if (hungUp) return;
+              delivered += chunk.length;
+              res.emit('data', chunk);
+            }
+            if (!hungUp) res.emit('end');
           }
         });
       },
@@ -78,6 +91,7 @@ beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'btcnode-updates-'));
   answers.clear();
   requested.length = 0;
+  delivered = 0;
 });
 afterEach(async () => {
   for (const s of servers.splice(0)) s.close();
@@ -160,6 +174,49 @@ describe('weekly update check', () => {
       { name: 'Bitcoin Core', installed: '31.1', latest: null, outdated: false },
       { name: 'electrs', installed: '0.10.9', latest: null, outdated: false },
     ]);
+  });
+
+  it('reads only as much of a feed larger than the cap as the newest version needs', async () => {
+    // The live feed is 2.8 MB, the newest release is in its first item.
+    const item = (t: string) =>
+      `<item><title>${t}</title><description>${'x'.repeat(2000)}</description></item>`;
+    const feed =
+      '<rss><channel><title>Bitcoin Core</title>' +
+      item('Bitcoin Core 32.1') +
+      item('Bitcoin Core 32.0').repeat(1500) +
+      '</channel></rss>';
+    expect(feed.length).toBeGreaterThan(2_000_000);
+    const chunks = feed.match(/[\s\S]{1,65536}/g) ?? [];
+    answers.set(CORE_RSS, { chunks });
+    const result = await new UpdateChecker({
+      rpc: rpc('/Satoshi:31.3.0/'),
+      outFile: join(dir, 'updates.json'),
+      electrumPort: await closedPort(),
+      log: pino({ level: 'silent' }),
+    }).runOnce();
+    expect(result?.entries).toEqual([
+      { name: 'Bitcoin Core', installed: '31.3', latest: '32.1', outdated: true },
+    ]);
+    // hung up after the first chunk instead of reading the rest
+    expect(delivered).toBeLessThan(200_000);
+  });
+
+  it('still refuses an answer over the cap that holds no version', async () => {
+    const filler = `<item><title>nothing here</title><description>${'x'.repeat(2000)}</description></item>`;
+    const feed = `<rss><channel><title>Bitcoin Core</title>${filler.repeat(1500)}</channel></rss>`;
+    expect(feed.length).toBeGreaterThan(2_000_000);
+    answers.set(CORE_RSS, { chunks: feed.match(/[\s\S]{1,65536}/g) ?? [] });
+    const result = await new UpdateChecker({
+      rpc: rpc('/Satoshi:31.3.0/'),
+      outFile: join(dir, 'updates.json'),
+      electrumPort: await closedPort(),
+      log: pino({ level: 'silent' }),
+    }).runOnce();
+    expect(result?.entries).toEqual([
+      { name: 'Bitcoin Core', installed: '31.3', latest: null, outdated: false },
+    ]);
+    // the client stopped reading at the cap
+    expect(delivered).toBeLessThan(2_100_000);
   });
 
   it('skips electrs when nothing answers on its port or the answer is garbage', async () => {
