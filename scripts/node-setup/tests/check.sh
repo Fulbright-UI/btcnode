@@ -189,6 +189,12 @@ check "$?" "30-bitcoin-core.sh writes no upnp= line into bitcoin.conf"
 grep -qF -- '--no-upnp' 30-bitcoin-core.sh
 check "$?" "30-bitcoin-core.sh still accepts --no-upnp"
 
+# electrs 0.11 reads getmempoolentry with a required bip125-replaceable field.
+# Core 32 only sends it with this option, otherwise electrs drops the whole
+# mempool and answers clients slowly. Remove with the move to electrs 0.12.
+grep -qx 'deprecatedrpc=bip125' 30-bitcoin-core.sh
+check "$?" "30-bitcoin-core.sh writes deprecatedrpc=bip125 into bitcoin.conf"
+
 # ==================================================================== Result =
 printf '\n'
 if (( FAILURES == 0 )); then
