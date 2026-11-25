@@ -118,7 +118,7 @@ jobs:
           file: deploy/Dockerfile.${{ matrix.image }}
           platforms: linux/arm64
           push: false
-          load: ${{ matrix.image == 'web' }}
+          load: true
           tags: btcnode-${{ matrix.image }}:ci
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
@@ -145,6 +145,25 @@ jobs:
           done
           curl -fsk https://127.0.0.1/ | grep -q 'id="app"'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/)" = 301
+      # The api container runs as uid 1000 with a read-only root file system.
+      # A fresh state volume has to be writable for it, or the update check
+      # cannot store its result (updates.json).
+      - name: api writes its state volume as compose runs it
+        if: matrix.image == 'api'
+        working-directory: deploy
+        env:
+          API_IMAGE: btcnode-api:ci
+          JOURNAL_GID: '1'
+          AGENT_GID: '2'
+        run: |
+          touch .env
+          docker compose run --rm --no-deps api node -e '
+            const fs = require("node:fs");
+            const file = "/var/lib/btcnode/updates.json";
+            if (process.getuid() !== 1000) throw new Error("not uid 1000");
+            fs.writeFileSync(file + ".tmp", "{}");
+            fs.renameSync(file + ".tmp", file);
+            console.log("wrote", file, "as uid", process.getuid());'
       - name: web container log
         if: always() && matrix.image == 'web'
         working-directory: deploy

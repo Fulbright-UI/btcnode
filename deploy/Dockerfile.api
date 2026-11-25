@@ -46,6 +46,10 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build --chown=node:node /out/ ./
 ENV NODE_ENV=production HOST=127.0.0.1 PORT=3000
+# The state volume (docker-compose.yml) starts as a copy of this directory,
+# owner included. Without it a fresh volume belongs to root, and the update
+# check cannot write updates.json as uid 1000 on a read-only root file system.
+RUN install -d -o 1000 -g 1000 -m 0755 /var/lib/btcnode
 # node; install.sh makes the secrets readable for this gid
 USER 1000:1000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
