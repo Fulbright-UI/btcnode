@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@btcnode/shared": "workspace:*",
-    "pinia": "^3.0.4",
+    "@vue/devtools-api": "^8.2.1",
+    "pinia": "^4.1.0",
     "vue": "^3.5.46",
     "vue-i18n": "^11.4.23",
     "zod": "^4.6.7"
@@ -22,7 +23,7 @@
     "@vitejs/plugin-vue": "^6.0.11",
     "@vitest/coverage-v8": "^5.1.1",
     "@vue/test-utils": "^2.6.0",
-    "@vue/tsconfig": "^0.8.1",
+    "@vue/tsconfig": "^0.9.1",
     "fast-check": "^4.11.0",
     "happy-dom": "^21.0.4",
     "vite": "^8.3.8",
