@@ -178,6 +178,17 @@ for f in "${SCRIPTS[@]}"; do
     check "$?" "$f: ufw delete uses --force, not yes |"
 done
 
+# ================================================================ Core options =
+title "Bitcoin Core: no option the node no longer knows"
+
+# Core dropped UPnP in version 29 and ignores the key with a warning at every
+# start. The script must not write it, and old calls with --no-upnp must keep
+# working.
+! grep -q '^upnp=' 30-bitcoin-core.sh
+check "$?" "30-bitcoin-core.sh writes no upnp= line into bitcoin.conf"
+grep -qF -- '--no-upnp' 30-bitcoin-core.sh
+check "$?" "30-bitcoin-core.sh still accepts --no-upnp"
+
 # ==================================================================== Result =
 printf '\n'
 if (( FAILURES == 0 )); then
