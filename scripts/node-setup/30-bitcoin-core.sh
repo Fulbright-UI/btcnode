@@ -476,6 +476,12 @@ rpcwhitelist=dashboard:getblockchaininfo,getnetworkinfo,getmempoolinfo,uptime,ge
 # account keeps its full range.
 rpcwhitelistdefault=0
 
+# --- electrs ---------------------------------------------------------------
+deprecatedrpc=bip125
+# Needed for electrs 0.11 with Core 32: electrs reads bip125-replaceable from
+# getmempoolentry, which Core 32 sends only with this option. Remove it after
+# the move to electrs 0.12.
+
 # --- Log -------------------------------------------------------------------
 shrinkdebugfile=1
 EOF
