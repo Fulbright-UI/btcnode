@@ -14,7 +14,7 @@
 # Usage:  sudo bash 40-electrs.sh
 #
 # Options:
-#   --version 0.11.1   a different electrs version
+#   --version 0.12.1   a different electrs version
 #   --port 50001       a different port
 #   --no-tor           do not set up onion access
 #   --build-now        start even if the node is not fully synced yet
@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-ELECTRS_VERSION="0.11.1"
+ELECTRS_VERSION="0.12.1"
 WITH_TOR=1
 FORCE=0
 ELECTRS_USER="electrs"
@@ -327,7 +327,6 @@ network = "bitcoin"
 db_dir = "${DB_DIR}"
 daemon_dir = "${DATADIR}"
 daemon_rpc_addr = "127.0.0.1:8332"
-daemon_p2p_addr = "127.0.0.1:8333"
 auth = "electrs:${ELECTRS_PASS}"
 
 # Listen locally only. Access from the local network goes through the
@@ -368,6 +367,9 @@ RestartSec=30
 TimeoutStopSec=300
 KillSignal=SIGINT
 Nice=10
+# electrs 0.12 keeps many RocksDB files open; the default soft limit of
+# 1024 makes it crash with "Too many open files" once the index is built.
+LimitNOFILE=65536
 
 NoNewPrivileges=true
 PrivateTmp=true

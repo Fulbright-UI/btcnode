@@ -191,9 +191,19 @@ check "$?" "30-bitcoin-core.sh still accepts --no-upnp"
 
 # electrs 0.11 reads getmempoolentry with a required bip125-replaceable field.
 # Core 32 only sends it with this option, otherwise electrs drops the whole
-# mempool and answers clients slowly. Remove with the move to electrs 0.12.
+# mempool and answers clients slowly. Needed only while electrs 0.11 runs.
 grep -qx 'deprecatedrpc=bip125' 30-bitcoin-core.sh
 check "$?" "30-bitcoin-core.sh writes deprecatedrpc=bip125 into bitcoin.conf"
+
+# electrs 0.12 (bindex) reads blocks over REST and fails with HTTP 404 when
+# bitcoind runs without it.
+grep -qx 'rest=1' 30-bitcoin-core.sh
+check "$?" "30-bitcoin-core.sh writes rest=1 into bitcoin.conf"
+
+# electrs 0.12 keeps many RocksDB files open and crashes with "Too many open
+# files" under the default soft limit of 1024.
+grep -qx 'LimitNOFILE=65536' 40-electrs.sh
+check "$?" "40-electrs.sh raises LimitNOFILE for electrs.service"
 
 # ==================================================================== Result =
 printf '\n'
