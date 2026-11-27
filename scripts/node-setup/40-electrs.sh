@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# 40-electrs.sh â€” set up an Electrum server (electrs) for your wallet.
+# 40-electrs.sh — set up an Electrum server (electrs) for your wallet.
 #
 # Wallets like BitBoxApp, Sparrow or Electrum do not talk to Bitcoin Core
 # directly, they talk to an Electrum server. It prepares the blockchain so the
-# wallet can ask for the balance and history of your addresses â€” without any
+# wallet can ask for the balance and history of your addresses — without any
 # stranger's server ever learning which addresses are yours.
 #
 # Requirements:
@@ -378,7 +378,7 @@ write_electrs_config() {
     local new="${WORK}/config.toml.new"
     if [[ ! -f "$ELECTRS_CONFIG" ]]; then
         cat > "$ELECTRS_CONFIG" <<EOF
-# electrs â€” Electrum server for your own wallet
+# electrs — Electrum server for your own wallet
 network = "bitcoin"
 db_dir = "${DB_DIR}"
 daemon_dir = "${DATADIR}"
@@ -394,7 +394,7 @@ monitoring_addr = "127.0.0.1:4224"
 
 log_filters = "INFO"
 index_lookup_limit = 200
-server_banner = "$(hostname) â€” private node"
+server_banner = "$(hostname) — private node"
 EOF
         return 0
     fi
@@ -409,7 +409,7 @@ EOF
     toml_add "$new" monitoring_addr '"127.0.0.1:4224"'
     toml_add "$new" log_filters '"INFO"'
     toml_add "$new" index_lookup_limit 200
-    toml_add "$new" server_banner "\"$(hostname) â€” private node\""
+    toml_add "$new" server_banner "\"$(hostname) — private node\""
     if ! cmp -s "$new" "$ELECTRS_CONFIG"; then
         cp -p "$ELECTRS_CONFIG" "${ELECTRS_CONFIG}.backup.$(date +%Y%m%d-%H%M%S)"
         cat "$new" > "$ELECTRS_CONFIG"
@@ -817,7 +817,7 @@ systemctl daemon-reload
 STATE_AFTER="$(electrs_state_sum)"
 
 # While the chain is still coming down, electrs stays off. Its first index
-# pass reads the whole blockchain and writes its own database â€” the same disk,
+# pass reads the whole blockchain and writes its own database — the same disk,
 # the same cores, the same memory bandwidth Bitcoin Core is using to validate.
 # On a 4 GB Pi the two do not fit beside each other: both get slower and
 # neither finishes sooner.
@@ -850,7 +850,7 @@ CIDR="$(ip -4 -o addr show 2>/dev/null | awk -v ip="$LOCAL_IP" '$4 ~ "^"ip"/" {p
 SUBNET="$(python3 -c "import ipaddress,sys; print(ipaddress.ip_network(sys.argv[1], strict=False))" "$CIDR")"
 
 # electrs listens on 127.0.0.1 only. To let a wallet on the LAN reach it we
-# forward the port â€” that way electrs itself stays untouched and keeps its
+# forward the port — that way electrs itself stays untouched and keeps its
 # loopback-only binding.
 command -v socat >/dev/null 2>&1 || apt-get install -y -qq socat >/dev/null
 cat > /etc/systemd/system/electrs-lan.service <<EOF
@@ -882,7 +882,7 @@ RestrictAddressFamilies=AF_INET AF_INET6
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-# Requires=electrs.service â€” it cannot run before electrs does, so it waits
+# Requires=electrs.service — it cannot run before electrs does, so it waits
 # for the same moment.
 if (( SYNCED == 1 )); then
     systemctl enable --now electrs-lan >/dev/null
