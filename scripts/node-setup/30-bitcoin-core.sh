@@ -477,10 +477,13 @@ rpcwhitelist=dashboard:getblockchaininfo,getnetworkinfo,getmempoolinfo,uptime,ge
 rpcwhitelistdefault=0
 
 # --- electrs ---------------------------------------------------------------
+# electrs 0.12 reads blocks over REST. It is reachable only through rpcbind, so
+# on localhost.
+rest=1
+# Only electrs 0.11 needs the next line (it reads bip125-replaceable from
+# getmempoolentry, which Core 32 sends only with this option). electrs 0.12
+# does not, so it can go once the node runs 0.12.
 deprecatedrpc=bip125
-# Needed for electrs 0.11 with Core 32: electrs reads bip125-replaceable from
-# getmempoolentry, which Core 32 sends only with this option. Remove it after
-# the move to electrs 0.12.
 
 # --- Log -------------------------------------------------------------------
 shrinkdebugfile=1
