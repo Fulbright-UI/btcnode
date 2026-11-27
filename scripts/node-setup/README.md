@@ -32,6 +32,19 @@ Run them in this order. Every script is repeatable: running it twice does not
 break anything. `20-storage.sh` is repeatable in the sense that the result is
 the same, not in the sense that data survives.
 
+`30-bitcoin-core.sh` sets up a new node. On a machine that already has one it
+stops, because a new setup rewrites `bitcoin.conf` and resets the firewall.
+To only update Bitcoin Core, run `sudo bash 30-bitcoin-core.sh --upgrade-existing`:
+it checks the checksum and the signatures, keeps a copy of the old binaries
+in `/usr/local/lib/btcnode/`, replaces them and restarts the node. Configuration,
+firewall, credentials and pruning stay as they are. `--yes` never switches pruning
+on; only `--prune` does. `40-electrs.sh` keeps an existing index directory, the
+RPC password and the other values in `config.toml`, and builds only if the wanted
+version is not installed yet (`--rebuild` forces it). It stops instead of guessing when
+`db_dir` cannot be read, when the password does not fit the `rpcauth` line in
+`bitcoin.conf` (`--new-password` creates a new one and restarts Core), or when `db_dir`
+lies in Core's data directory.
+
 ```bash
 git clone https://github.com/Fulbright-UI/btcnode.git
 cd btcnode/scripts/node-setup

@@ -164,6 +164,18 @@ if [[ -f tests/tor-after-sync-test.sh ]]; then
     fi
 fi
 
+# ============================================================ Existing nodes =
+# 30 and 40 on a machine that already runs a node: they must stop or keep what
+# is there. Run for real against stand-ins, see tests/existing-node-test.sh.
+if [[ -f tests/existing-node-test.sh ]]; then
+    printf '\n'
+    if bash tests/existing-node-test.sh; then
+        check 0 "scripts 30 and 40 treat an existing node as documented"
+    else
+        check 1 "scripts 30 and 40 treat an existing node as documented" "see the output above"
+    fi
+fi
+
 # ================================================================== Firewall =
 title "Firewall: rules are deleted by mark or anchored port"
 
