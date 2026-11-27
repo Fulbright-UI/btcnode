@@ -20,9 +20,17 @@
 #   --prune 600000   keep only ~600 GB of blocks
 #   --tor            also talk over Tor (50-tor.sh does this properly later)
 #   --no-upnp        accepted and ignored, Core no longer has UPnP
-#   --yes            no questions; accept the defaults
+#   --upgrade-existing
+#                    on a node that already runs: only replace the binaries
+#                    (checksum and signatures checked) and restart. The
+#                    configuration, firewall, pruning and credentials stay as
+#                    they are. Cannot be combined with --prune or --tor.
+#   --yes            no questions; accept the defaults. Never switches pruning
+#                    on, only --prune does.
 #
-# Repeatable: running it twice upgrades in place and keeps your credentials.
+# This script sets up a NEW node. On a machine that already has one it stops,
+# unless --upgrade-existing is given: a fresh setup rewrites bitcoin.conf and
+# resets the firewall.
 
 set -euo pipefail
 
@@ -34,6 +42,9 @@ MIN_SIGNATURES=3
 BITCOIN_USER="bitcoin"
 BASE_URL="https://bitcoincore.org/bin"
 ASSUME_YES=0
+UPGRADE_EXISTING=0
+INTERACTIVE=0
+[[ -t 0 ]] && INTERACTIVE=1
 
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }
 green()  { printf '\033[32m%s\033[0m\n' "$*"; }
@@ -43,6 +54,64 @@ ok()     { printf '  [ ok ] %s\n' "$*"; }
 info()   { printf '  ...... %s\n' "$*"; }
 warn()   { printf '  [ !! ] %s\n' "$*"; }
 
+# What an earlier setup leaves behind: the configuration in the data directory,
+# the service, or the credentials file (/etc/bitcoin-zugang.conf is the name the
+# older German scripts gave it). Prints what was found, succeeds if anything was.
+find_existing_node() {
+    local datadir="$1" etc="$2" f found=1
+    for f in "${datadir}/bitcoin.conf" "${etc}/systemd/system/bitcoind.service" \
+             "${etc}/bitcoin-access.conf" "${etc}/bitcoin-zugang.conf"; do
+        if [[ -e "$f" ]]; then printf '%s\n' "$f"; found=0; fi
+    done
+    return "$found"
+}
+
+# Decides whether this run may go on. A fresh setup would rewrite bitcoin.conf
+# and reset the firewall on a node that has been running for months, so it
+# needs the explicit switch, and the switch needs a node to act on.
+check_existing_node() {   # check_existing_node DATADIR ETC UPGRADE
+    local markers
+    markers="$(find_existing_node "$1" "$2" || true)"
+    if [[ -n "$markers" && "$3" != "1" ]]; then
+        red "  A Bitcoin node is already set up on this machine:"
+        sed 's/^/    /' <<<"$markers"
+        red "  A new setup would rewrite bitcoin.conf, reset the firewall and could"
+        red "  switch pruning on. To only update Bitcoin Core (binaries, then restart),"
+        red "  run this script again with --upgrade-existing."
+        return 1
+    fi
+    if [[ "$3" == "1" && ! -e "${2}/systemd/system/bitcoind.service" ]]; then
+        red "  --upgrade-existing needs a node with ${2}/systemd/system/bitcoind.service"
+        red "  and found none. Run the script without it to set up a new node."
+        return 1
+    fi
+    return 0
+}
+
+# Pruning throws block data away; the way back is a new download. So it is
+# switched on only by --prune or by an answer typed at a terminal. --yes and a
+# pipe leave it off (electrs needs the complete chain).
+decide_pruning() {
+    local SUGGESTION A
+    echo
+    yellow "  For the complete blockchain you want about 900 GB free"
+    yellow "  (roughly 750 GB today, plus 5-10 GB per month)."
+    echo
+    echo "  The alternative is pruning: the node still validates every block in"
+    echo "  full and is equally secure. It merely discards old block data after"
+    echo "  checking it and can no longer serve those blocks to other nodes."
+    echo
+    SUGGESTION=$(( (FREE_GB - 100) * 1000 ))
+    (( SUGGESTION < 10000 )) && SUGGESTION=10000
+    if (( ASSUME_YES == 0 && INTERACTIVE == 1 )); then
+        read -r -p "  Switch pruning on at ${SUGGESTION} MB? [Y/n] " A
+        [[ "${A,,}" == "n" ]] || PRUNE_MB="$SUGGESTION"
+    else
+        yellow "  Pruning stays off. To switch it on, pass --prune ${SUGGESTION}."
+    fi
+    if (( PRUNE_MB > 0 )); then ok "pruning: ${PRUNE_MB} MB"; fi
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --datadir) DATADIR="${2:-}"; shift 2 ;;
@@ -50,11 +119,18 @@ while [[ $# -gt 0 ]]; do
         --prune)   PRUNE_MB="${2:-}"; shift 2 ;;
         --tor)     WITH_TOR=1; shift ;;
         --no-upnp) warn "--no-upnp has no effect: Core dropped UPnP in version 29"; shift ;;
+        --upgrade-existing) UPGRADE_EXISTING=1; shift ;;
         --yes)     ASSUME_YES=1; shift ;;
-        -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,33p' "$0"; exit 0 ;;
         *) red "Unknown option: $1"; exit 1 ;;
     esac
 done
+
+if (( UPGRADE_EXISTING == 1 && (PRUNE_MB > 0 || WITH_TOR == 1) )); then
+    red "--upgrade-existing only replaces the binaries; --prune and --tor change the"
+    red "configuration and cannot be combined with it."
+    exit 1
+fi
 
 [[ $EUID -eq 0 ]] || { red "Please run with sudo."; exit 1; }
 
@@ -79,7 +155,18 @@ trap 'rm -rf "$WORK"' EXIT
 title "Preconditions"
 ok "architecture: $(uname -m)"
 
+check_existing_node "$DATADIR" /etc "$UPGRADE_EXISTING" || exit 1
+if (( UPGRADE_EXISTING == 1 )); then
+    ok "existing node: only the binaries will be replaced"
+    for T in curl gpg git sha256sum tar; do
+        command -v "$T" >/dev/null 2>&1 || { red "  '$T' is missing; install it first."; exit 1; }
+    done
+fi
+
 TARGET_BASE="$(dirname "$DATADIR")"
+# The following parts set up a new node (checks, packages, firewall) and are
+# skipped for --upgrade-existing. They are not indented, to keep the diff small.
+if (( UPGRADE_EXISTING == 0 )); then
 if mountpoint -q "$TARGET_BASE"; then
     ok "target sits on its own volume $TARGET_BASE"
 else
@@ -96,23 +183,7 @@ FREE_GB=$(( $(df -B1 --output=avail "$TARGET_BASE" | tail -1) / 1000000000 ))
 ok "free space: ${FREE_GB} GB"
 
 if (( PRUNE_MB == 0 && FREE_GB < 900 )); then
-    echo
-    yellow "  For the complete blockchain you want about 900 GB free"
-    yellow "  (roughly 750 GB today, plus 5-10 GB per month)."
-    echo
-    echo "  The alternative is pruning: the node still validates every block in"
-    echo "  full and is equally secure. It merely discards old block data after"
-    echo "  checking it and can no longer serve those blocks to other nodes."
-    echo
-    SUGGESTION=$(( (FREE_GB - 100) * 1000 ))
-    (( SUGGESTION < 10000 )) && SUGGESTION=10000
-    if (( ASSUME_YES == 0 )) && [[ -t 0 ]]; then
-        read -r -p "  Switch pruning on at ${SUGGESTION} MB? [Y/n] " A
-        [[ "${A,,}" == "n" ]] || PRUNE_MB="$SUGGESTION"
-    else
-        PRUNE_MB="$SUGGESTION"
-    fi
-    (( PRUNE_MB > 0 )) && ok "pruning: ${PRUNE_MB} MB"
+    decide_pruning
 fi
 
 # This is Bitcoin Core's own default, written out rather than left implicit.
@@ -141,8 +212,13 @@ if (( RAM_MB >= 4096 )); then DBCACHE=1024
 else                          DBCACHE=450
 fi
 ok "RAM ${RAM_MB} MB, ${CORES} cores, dbcache ${DBCACHE} MB (Core's default)"
+fi   # end of the preconditions for a new node
 
 # ============================================================ System packages =
+# Packages, journal, swap and firewall belong to setting up a new node. On an
+# existing one they are left as they are (--upgrade-existing); the firewall in
+# particular is reset below, which would drop every rule the owner added.
+if (( UPGRADE_EXISTING == 0 )); then
 title "System packages"
 export DEBIAN_FRONTEND=noninteractive
 info "refreshing package lists ..."
@@ -280,6 +356,7 @@ fi
 
 systemctl enable --now fail2ban >/dev/null 2>&1 || true
 ok "fail2ban is running"
+fi   # end of the system setup for a new node
 
 # ================================================= Download Bitcoin Core =====
 title "Downloading Bitcoin Core ${VERSION}"
@@ -335,15 +412,57 @@ tar -xzf "$ARCHIVE"
 SOURCE="$WORK/bitcoin-${VERSION}"
 [[ -d "$SOURCE/bin" ]] || { red "  unexpected archive content."; exit 1; }
 
+# Stopping bitcoind also stops what requires it (electrs, electrs-lan). On an
+# existing node they are noted here and started again afterwards.
+RESTART_AFTER=()
 if systemctl is-active --quiet bitcoind 2>/dev/null; then
+    if (( UPGRADE_EXISTING == 1 )); then
+        for U in electrs electrs-lan; do
+            if systemctl is-active --quiet "$U" 2>/dev/null; then RESTART_AFTER+=("$U"); fi
+        done
+    fi
     info "stopping the running service for the upgrade ..."
     systemctl stop bitcoind
+fi
+
+if (( UPGRADE_EXISTING == 1 )) && [[ -x /usr/local/bin/bitcoind ]]; then
+    # Keep the old binaries, so the way back is a copy and not a download.
+    OLD_VERSION="$(/usr/local/bin/bitcoind --version 2>/dev/null | head -1 | sed -E 's/.* v?([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/; s/\.0$//')"
+    # "v31.3.0" in the banner, "31.3" in the release name
+    if [[ -n "$OLD_VERSION" ]]; then
+        OLD_DIR="/usr/local/lib/btcnode/bitcoin-core-${OLD_VERSION}"
+        if [[ ! -d "$OLD_DIR" ]]; then
+            mkdir -p "$OLD_DIR"
+            cp -p /usr/local/bin/bitcoin* "$OLD_DIR"/
+            ok "old binaries kept in $OLD_DIR"
+        fi
+    fi
 fi
 
 rm -f "$SOURCE/bin/bitcoin-qt" "$SOURCE/bin/test_bitcoin"
 install -m 0755 -o root -g root "$SOURCE"/bin/* /usr/local/bin/
 ok "binaries in /usr/local/bin"
 /usr/local/bin/bitcoind --version | head -1 | sed 's/^/  /'
+
+if (( UPGRADE_EXISTING == 1 )); then
+    info "starting Bitcoin Core ..."
+    systemctl start bitcoind
+    sleep 12
+    if ! systemctl is-active --quiet bitcoind; then
+        red "  Start failed. Last messages:"
+        journalctl -u bitcoind -n 40 --no-pager | sed 's/^/    /'
+        exit 1
+    fi
+    green "  Bitcoin Core ${VERSION} is running."
+    if (( ${#RESTART_AFTER[@]} > 0 )); then
+        for U in "${RESTART_AFTER[@]}"; do systemctl start "$U"; done
+        ok "started again: ${RESTART_AFTER[*]}"
+    fi
+    title "Done"
+    echo "  Replaced: the Bitcoin Core binaries in /usr/local/bin."
+    echo "  Untouched: bitcoin.conf, bitcoind.service, credentials, firewall, pruning."
+    exit 0
+fi
 
 if ! id -u "$BITCOIN_USER" >/dev/null 2>&1; then
     useradd --system --shell /usr/sbin/nologin --home-dir "$DATADIR" "$BITCOIN_USER"
