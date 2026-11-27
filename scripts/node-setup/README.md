@@ -40,7 +40,10 @@ in `/usr/local/lib/btcnode/`, replaces them and restarts the node. Configuration
 firewall, credentials and pruning stay as they are. `--yes` never switches pruning
 on; only `--prune` does. `40-electrs.sh` keeps an existing index directory, the
 RPC password and the other values in `config.toml`, and builds only if the wanted
-version is not installed yet (`--rebuild` forces it).
+version is not installed yet (`--rebuild` forces it). It stops instead of guessing when
+`db_dir` cannot be read, when the password does not fit the `rpcauth` line in
+`bitcoin.conf` (`--new-password` creates a new one and restarts Core), or when `db_dir`
+lies in Core's data directory.
 
 ```bash
 git clone https://github.com/Fulbright-UI/btcnode.git

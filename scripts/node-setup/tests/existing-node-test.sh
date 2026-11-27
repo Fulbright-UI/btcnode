@@ -272,10 +272,12 @@ check $? "the header documents --upgrade-existing"
 # ================================================================ 40 =======
 # Functions out of 40-electrs.sh, run against files in a temp directory.
 title "40: loading the functions"
-for F in toml_get toml_set toml_add electrs_db_dir existing_electrs_pass find_access_file \
-         reuse_electrs_access remember_electrs_access electrs_is_current chain_info \
-         ensure_electrs_user prepare_db_dir write_electrs_config write_electrs_unit \
-         electrs_state_sum; do
+for F in toml_get toml_set toml_add toml_ensure electrs_db_dir db_dir_safe existing_electrs_pass \
+         find_access_file rpcauth_matches password_chars_ok reuse_electrs_access \
+         ensure_electrs_access remember_electrs_access electrs_is_current need_build \
+         parse_args chain_info ensure_electrs_user prepare_db_dir write_electrs_config \
+         write_electrs_unit electrs_state_sum restart_electrs_if_changed add_onion_to_torrc \
+         tor_needs_restart ufw_rule_present; do
     load_fn "$S40" "$F" && check 0 "40-electrs.sh defines $F()"
 done
 
@@ -297,9 +299,36 @@ LOG="${BOX}/e.log"; : > "$LOG"
 id()      { [[ "${1:-}" == "-u" ]] && [[ "${USER_EXISTS:-0}" == "1" ]]; }
 getent()  { echo "electrs:x:996:983::${USER_HOME:-/nonexistent}:/usr/sbin/nologin"; }
 useradd() { echo "useradd $*" >> "$LOG"; }
-usermod() { echo "usermod $*" >> "$LOG"; }
+# usermod refuses to change the home of an account that has running processes
+usermod() { echo "usermod $*" >> "$LOG"; [[ "${USERMOD_FAILS:-0}" != 1 ]]; }
 chown()   { echo "chown $*" >> "$LOG"; }
 hostname(){ echo "btcnode"; }
+sleep()   { :; }
+ELECTRS_WAS_ACTIVE=0
+NEW_PASSWORD=0
+ACTIVE="${BOX}/active"; DROPINS="${BOX}/dropins"; mkdir -p "$ACTIVE" "$DROPINS"
+# systemctl as the node has it: is-active from marker files, restarts logged, and
+# "show" reports the unit as systemd merged it with its drop-in files (list
+# values add up, single values are overridden by the last file).
+systemctl() {
+    case "$1" in
+        is-active) shift; [[ "${1:-}" == --quiet ]] && shift; [[ -e "${ACTIVE}/$1" ]] ;;
+        show)
+            { cat "$ELECTRS_UNIT" 2>/dev/null; cat "$DROPINS"/*.conf 2>/dev/null; } | awk -F= '
+                /^(User|Group|SupplementaryGroups|LimitNOFILE)=/ { s[$1] = $2 }
+                /^(ReadWritePaths|ReadOnlyPaths)=/ { l[$1] = l[$1] " " $2 }
+                END { for (k in s) print k "=" s[k]; for (k in l) print k "=" substr(l[k], 2) }' ;;
+        *) echo "systemctl $*" >> "$LOG" ;;
+    esac
+}
+# An rpcauth line as Core's rpcauth.py writes it, for a given password.
+rpcauth_for() {
+    RPC_PASS="$1" python3 -c 'import hashlib,hmac,os
+s = os.urandom(16).hex()
+print("electrs:" + s + "$" + hmac.new(s.encode(), os.environ["RPC_PASS"].encode(), hashlib.sha256).hexdigest())' | tr -d '\r'
+}
+python3 -c 'import hmac' >/dev/null 2>&1
+check $? "python3 is available for the hmac checks"
 
 # The config.toml of the running node, as the older script wrote it.
 node_config() {
@@ -336,6 +365,63 @@ printf 'db_dir = "/mnt/x y/$(touch hacked)"\n' >> "$ELECTRS_CONFIG"
 electrs_db_dir "$DEFAULT_DB" >/dev/null 2>&1
 check $(( $? != 0 ? 0 : 1 )) "a db_dir with spaces or shell characters is refused"
 
+# A db_dir line that is there but written differently must be read or refused,
+# never turned into the default (that would mean a new index, for many hours).
+try_db() {   # try_db LINE: the directory it yields, or ABORT
+    printf '%s\n' "$1" > "$ELECTRS_CONFIG"
+    electrs_db_dir "$DEFAULT_DB" 2>/dev/null || echo ABORT
+}
+[[ "$(try_db "db_dir = '${NEW_DB}'")" == "$NEW_DB" ]]
+check $? "single quotes: the directory, not the default" "got $(try_db "db_dir = '${NEW_DB}'")"
+[[ "$(try_db "db_dir = \"${NEW_DB}\"   # moved for 0.12")" == "$NEW_DB" ]]
+check $? "a comment at the end of the line: the directory"
+[[ "$(try_db "db_dir   =   \"${NEW_DB}\"  ")" == "$NEW_DB" ]]
+check $? "spaces around the equals sign and at the end: the directory"
+[[ "$(try_db "db_dir = '${NEW_DB}' # note")" == "$NEW_DB" ]]
+check $? "single quotes and a comment: the directory"
+[[ "$(try_db "db_dir = ${NEW_DB}")" == ABORT ]]
+check $? "no quotes at all: abort, not the default"
+[[ "$(try_db "db_dir = \"${NEW_DB}")" == ABORT ]]
+check $? "a quote that is never closed: abort"
+[[ "$(try_db "db_dir = \"${NEW_DB}\" extra")" == ABORT ]]
+check $? "text after the closing quote: abort"
+[[ "$(try_db 'db_dir = ""')" == ABORT ]]
+check $? "an empty db_dir: abort"
+[[ "$(try_db 'db_dir = "/mnt/bitcoin/a\\b"')" == ABORT ]]
+check $? "a backslash escape: abort"
+printf 'db_dir = %s\n' "'${NEW_DB}" > "$ELECTRS_CONFIG"
+OUT="$(electrs_db_dir "$DEFAULT_DB" 2>&1)"; grep -q 'db_dir' <<<"$OUT"
+check $? "the abort message names the key" "$OUT"
+# the file of the owner stays as it is when it already holds the wanted value
+printf 'network = "bitcoin"\ndb_dir = '"'"'%s'"'"'   # keep\nauth = "electrs:pw" # c\n' "$NEW_DB" > "$ELECTRS_CONFIG"
+cp "$ELECTRS_CONFIG" "$BOX/q.orig"
+toml_ensure "$ELECTRS_CONFIG" db_dir "$NEW_DB"; toml_ensure "$ELECTRS_CONFIG" auth "electrs:pw"
+cmp -s "$ELECTRS_CONFIG" "$BOX/q.orig"
+check $? "toml_ensure leaves a line with the wanted value byte for byte (quotes, comment)" "$(diff "$BOX/q.orig" "$ELECTRS_CONFIG" | head -4)"
+toml_ensure "$ELECTRS_CONFIG" auth "electrs:other"
+[[ "$(toml_get "$ELECTRS_CONFIG" auth)" == "electrs:other" ]] && grep -q "^db_dir = '" "$ELECTRS_CONFIG"
+check $? "toml_ensure changes only the line whose value differs"
+
+title "40: the index directory must not be Core's data directory (N-B4)"
+unsafe() { db_dir_safe "$1" "$2" >/dev/null 2>&1; }
+unsafe "${BASE}/electrs-0.12" "$DATADIR"; check $? "a sibling directory is fine"
+unsafe "${BASE}/bitcoin-electrs" "$DATADIR"; check $? "a sibling that merely starts with the same letters is fine"
+unsafe "$DATADIR" "$DATADIR"; check $(( $? != 0 ? 0 : 1 )) "the data directory itself is refused"
+unsafe "${DATADIR}/electrs" "$DATADIR"; check $(( $? != 0 ? 0 : 1 )) "a directory inside the data directory is refused"
+unsafe "${DATADIR}/" "$DATADIR"; check $(( $? != 0 ? 0 : 1 )) "the data directory with a trailing slash is refused"
+unsafe "$BASE" "$DATADIR"; check $(( $? != 0 ? 0 : 1 )) "the directory above the data directory is refused"
+unsafe "/" "$DATADIR"; check $(( $? != 0 ? 0 : 1 )) "/ is refused"
+unsafe "${BASE}/electrs" ""; check $(( $? != 0 ? 0 : 1 )) "an unknown data directory is refused"
+DB_DIR="$DATADIR"; : > "$LOG"
+prepare_db_dir >/dev/null 2>&1
+check $(( $? != 0 ? 0 : 1 )) "prepare_db_dir refuses the data directory"
+DB_DIR="$BASE"; prepare_db_dir >/dev/null 2>&1
+check $(( $? != 0 ? 0 : 1 )) "prepare_db_dir refuses the directory above"
+DB_DIR="${DATADIR}/idx"; prepare_db_dir >/dev/null 2>&1
+check $(( $? != 0 ? 0 : 1 )) "prepare_db_dir refuses a directory inside"
+[[ ! -s "$LOG" && ! -e "${DATADIR}/idx" ]]
+check $? "and in none of these cases a chown ran or a directory was made" "$(cat "$LOG")"
+
 title "40: all four places use the existing index directory (P8)"
 node_config
 DB_DIR="$(electrs_db_dir "$DEFAULT_DB" 2>/dev/null)"
@@ -345,16 +431,32 @@ rm -rf "$NEW_DB" "$DEFAULT_DB"; : > "$LOG"
 USER_EXISTS=0; ensure_electrs_user >/dev/null
 grep -q "^useradd .*--home-dir ${NEW_DB} " "$LOG"
 check $? "new user: useradd --home-dir is the existing index directory" "$(cat "$LOG")"
-# an existing user with another home is moved, not left behind
-: > "$LOG"; USER_EXISTS=1; USER_HOME="$DEFAULT_DB"
+# an existing user with another home: moved while electrs is stopped ...
+: > "$LOG"; USER_EXISTS=1; USER_HOME="$DEFAULT_DB"; ELECTRS_WAS_ACTIVE=0
 OUT="$(ensure_electrs_user)"
 grep -q "^usermod .*${NEW_DB} electrs" "$LOG"
-check $? "existing user with the old home: usermod to the index directory" "$(cat "$LOG")"
+check $? "existing user, electrs stopped: usermod to the index directory" "$(cat "$LOG")"
 grep -q "$DEFAULT_DB" <<<"$OUT" && grep -q "$NEW_DB" <<<"$OUT"
 check $? "and the output says from where to where" "$OUT"
-: > "$LOG"; USER_HOME="$NEW_DB"; ensure_electrs_user >/dev/null
+# ... but usermod refuses while the service runs, so it is not even tried
+: > "$LOG"; ELECTRS_WAS_ACTIVE=1
+OUT="$(ensure_electrs_user)"; RC=$?
+[[ ! -s "$LOG" ]]
+check $? "existing user, electrs running: usermod is not called" "$(cat "$LOG")"
+check $RC "and that is no error"
+grep -q "$DEFAULT_DB" <<<"$OUT" && grep -q 'usermod --home' <<<"$OUT" && grep -qi 'stop' <<<"$OUT"
+check $? "the output says the home stays, why, and the next step" "$OUT"
+# usermod that fails although electrs is stopped: a warning, no abort
+: > "$LOG"; ELECTRS_WAS_ACTIVE=0; USERMOD_FAILS=1
+OUT="$(ensure_electrs_user)"; RC=$?
+check $RC "usermod fails: no abort"
+grep -qi 'could not' <<<"$OUT"
+check $? "usermod fails: the output says so" "$OUT"
+USERMOD_FAILS=0
+: > "$LOG"; USER_HOME="$NEW_DB"; ELECTRS_WAS_ACTIVE=1; ensure_electrs_user >/dev/null
 [[ ! -s "$LOG" ]]
 check $? "existing user with the right home: left alone"
+ELECTRS_WAS_ACTIVE=0
 # 2. mkdir, chown, chmod
 : > "$LOG"; prepare_db_dir
 [[ -d "$NEW_DB" && ! -e "$DEFAULT_DB" ]]
@@ -376,38 +478,110 @@ rm -f "$ELECTRS_CONFIG"; DB_DIR="$DEFAULT_DB"; write_electrs_config >/dev/null; 
 [[ "$(toml_get "$ELECTRS_CONFIG" db_dir)" == "$DEFAULT_DB" ]] && grep -qx "ReadWritePaths=${DEFAULT_DB}" "$ELECTRS_UNIT"
 check $? "fresh machine: both files carry the default directory"
 
-title "40: the electrs password is reused (P9)"
+title "40: the electrs password is reused, and checked against rpcauth (P9, N-B3)"
 BTC_CONF="${DATADIR}/bitcoin.conf"
 SECRETS="${E}/etc/bitcoin-access.conf"
+PW="oldPassw0rd_-x"
+RPCAUTH="$(rpcauth_for "$PW")"
 node_config
-printf 'rpcauth=bitcoinadmin:a$b\nrpcauth=electrs:salt$hash\n' > "$BTC_CONF"
+printf 'rpcauth=bitcoinadmin:a$b\nrpcauth=%s\n' "$RPCAUTH" > "$BTC_CONF"
 printf "ADMIN_PASS='x'\n" > "$SECRETS"
 ELECTRS_PASS=""
-[[ "$(existing_electrs_pass)" == "oldPassw0rd_-x" ]]
+[[ "$(existing_electrs_pass)" == "$PW" ]]
 check $? "the password is read from config.toml auth" "got $(existing_electrs_pass)"
+rpcauth_matches "$BTC_CONF" "$PW"; check $? "rpcauth_matches: the right password"
+rpcauth_matches "$BTC_CONF" "${PW}x"; check $(( $? != 0 ? 0 : 1 )) "rpcauth_matches: a wrong password"
+rpcauth_matches "$BTC_CONF" ""; check $(( $? != 0 ? 0 : 1 )) "rpcauth_matches: an empty password"
 ELECTRS_PASS=""; reuse_electrs_access
 check $? "rpcauth=electrs in bitcoin.conf, no password in the credentials file: reused from config.toml"
-[[ "$ELECTRS_PASS" == "oldPassw0rd_-x" ]]
+[[ "$ELECTRS_PASS" == "$PW" ]]
 check $? "and it is the one from config.toml"
-ELECTRS_PASS="fromSecrets"; reuse_electrs_access && [[ "$ELECTRS_PASS" == "fromSecrets" ]]
-check $? "a password in the credentials file wins"
+ELECTRS_PASS="$PW"; reuse_electrs_access && [[ "$ELECTRS_PASS" == "$PW" ]]
+check $? "the password in the credentials file, when it matches, is used"
+# the credentials file is out of date: the matching password of config.toml wins
+ELECTRS_PASS="staleFromSecrets"; reuse_electrs_access && [[ "$ELECTRS_PASS" == "$PW" ]]
+check $? "credentials file out of date, config.toml right: the matching one is used" "got $ELECTRS_PASS"
+# neither matches: stop, do not invent a new account
+printf 'rpcauth=%s\n' "$(rpcauth_for somethingElse)" > "$BTC_CONF"
+ELECTRS_PASS="staleFromSecrets"; reuse_electrs_access; RC=$?
+check $(( RC == 2 ? 0 : 1 )) "no known password matches rpcauth: status 2 (abort), not a new account" "status $RC"
+ELECTRS_PASS=""; reuse_electrs_access; RC=$?
+check $(( RC == 2 ? 0 : 1 )) "the same with only config.toml" "status $RC"
+rm -f "$ELECTRS_CONFIG"; ELECTRS_PASS=""; reuse_electrs_access; RC=$?
+check $(( RC == 2 ? 0 : 1 )) "rpcauth=electrs there, no password known anywhere: status 2" "status $RC"
+node_config
 printf 'rpcauth=bitcoinadmin:a$b\n' > "$BTC_CONF"
-ELECTRS_PASS=""; reuse_electrs_access
-check $(( $? != 0 ? 0 : 1 )) "no rpcauth=electrs in bitcoin.conf: a new account is needed"
-printf 'rpcauth=electrs:salt$hash\n' > "$BTC_CONF"
-ELECTRS_PASS=""; reuse_electrs_access
+ELECTRS_PASS=""; reuse_electrs_access; RC=$?
+check $(( RC == 1 ? 0 : 1 )) "no rpcauth=electrs in bitcoin.conf: status 1, a new account is needed" "status $RC"
+# a password the TOML line could not hold is not used even if it matches
+BAD='pa"ss\word'
+printf 'rpcauth=%s\n' "$(rpcauth_for "$BAD")" > "$BTC_CONF"
+ELECTRS_PASS="$BAD"; reuse_electrs_access; RC=$?
+check $(( RC != 0 ? 0 : 1 )) "a password with a quote or backslash is refused (config.toml could not hold it)"
+password_chars_ok "$PW"; check $? "password_chars_ok: letters, digits, _ and -"
+printf 'rpcauth=%s\n' "$RPCAUTH" > "$BTC_CONF"
+ELECTRS_PASS=""; node_config; reuse_electrs_access
 remember_electrs_access
-grep -qx "ELECTRS_PASS='oldPassw0rd_-x'" "$SECRETS" && grep -qxF "ELECTRS_RPCAUTH='electrs:salt\$hash'" "$SECRETS"
+grep -qx "ELECTRS_PASS='${PW}'" "$SECRETS" && grep -qxF "ELECTRS_RPCAUTH='${RPCAUTH}'" "$SECRETS"
 check $? "the credentials file gets the two missing electrs lines" "$(sed 's/PASS=.*/PASS=<hidden>/' "$SECRETS")"
 SUM="$(cksum < "$SECRETS")"; remember_electrs_access
 [[ "$(cksum < "$SECRETS")" == "$SUM" ]]
 check $? "and not twice"
-# no bitcoind restart on the reuse path: it sits in the else branch
-REUSE_LN="$(grep -n '^if reuse_electrs_access' "$S40" | head -1 | cut -d: -f1)"
-ELSE_LN="$(awk -v s="${REUSE_LN:-0}" 'NR > s && /^else/ { print NR; exit }' "$S40")"
-RESTART_LN="$(grep -n 'systemctl restart bitcoind' "$S40" | head -1 | cut -d: -f1)"
-[[ -n "$REUSE_LN" && -n "$ELSE_LN" && -n "$RESTART_LN" && "$RESTART_LN" -gt "$ELSE_LN" ]]
-check $? "bitcoind is restarted only in the branch that creates a new account"
+
+# --- the whole step, as the script runs it -----------------------------------
+# The node as it is today: the account exists, the password is the one in
+# config.toml. Nothing may be created and Bitcoin Core must not restart.
+ensure_case() {   # ensure_case NAME: fresh files, then ensure_electrs_access
+    node_config
+    printf 'dbcache=300\nrpcauth=bitcoinadmin:a$b\nrpcauth=%s\n' "$RPCAUTH" > "$BTC_CONF"
+    printf "ADMIN_PASS='x'\n" > "$SECRETS"
+    ELECTRS_PASS=""; NEW_PASSWORD=0; : > "$LOG"; : > "${ACTIVE}/bitcoind"
+    cp "$BTC_CONF" "$BOX/conf.orig"
+}
+ensure_case
+OUT="$(ensure_electrs_access)"; RC=$?
+check $RC "node as it is: ensure_electrs_access succeeds" "$OUT"
+cmp -s "$BTC_CONF" "$BOX/conf.orig"; check $? "bitcoin.conf byte-identical"
+ls "$BTC_CONF".backup.* >/dev/null 2>&1; check $(( $? != 0 ? 0 : 1 )) "no backup of bitcoin.conf made"
+no grep -q 'restart bitcoind' "$LOG"; check $? "bitcoind is not restarted" "$(cat "$LOG")"
+ensure_case
+ELECTRS_PASS="staleFromSecrets"
+OUT="$(ensure_electrs_access)"; RC=$?
+check $RC "credentials file out of date, config.toml matches: succeeds"
+no grep -q 'restart bitcoind' "$LOG"; check $? "and still no restart of bitcoind"
+# a password that fits nothing: abort, and nothing is touched
+ensure_case
+printf 'dbcache=300\nrpcauth=%s\n' "$(rpcauth_for somethingElse)" > "$BTC_CONF"; cp "$BTC_CONF" "$BOX/conf.orig"
+OUT="$(ensure_electrs_access 2>&1)"; RC=$?
+check $(( RC != 0 ? 0 : 1 )) "no password fits rpcauth: abort"
+grep -q -- '--new-password' <<<"$OUT"; check $? "the message names --new-password" "$OUT"
+cmp -s "$BTC_CONF" "$BOX/conf.orig" && no grep -q 'restart bitcoind' "$LOG"
+check $? "the abort leaves bitcoin.conf alone and does not restart bitcoind"
+# ... unless that is asked for expressly
+NEW_PASSWORD=1; OUT="$(ensure_electrs_access)"; RC=$?
+check $RC "with --new-password: a new account is created" "$OUT"
+grep -q 'restart bitcoind' "$LOG"; check $? "and then bitcoind restarts"
+NEWPW="$(sed -n "s/^ELECTRS_PASS='\(.*\)'\$/\1/p" "$SECRETS")"
+[[ -n "$NEWPW" ]] && rpcauth_matches "$BTC_CONF" "$NEWPW" && [[ "$(grep -c '^rpcauth=electrs:' "$BTC_CONF")" == 1 ]]
+check $? "the new password matches the single rpcauth=electrs line in bitcoin.conf"
+ls "$BTC_CONF".backup.* >/dev/null 2>&1; check $? "bitcoin.conf was backed up first"
+rm -f "$BTC_CONF".backup.*
+# no account at all yet: created without the switch (a fresh machine)
+ensure_case
+printf 'dbcache=300\n' > "$BTC_CONF"
+OUT="$(ensure_electrs_access)"; RC=$?
+check $RC "no rpcauth=electrs yet: the account is created" "$OUT"
+grep -q 'restart bitcoind' "$LOG"; check $? "and bitcoind restarts (that is the only case)"
+rm -f "$BTC_CONF".backup.*
+# an unreadable auth line with a matching password in the credentials file
+ensure_case
+printf 'auth = electrs:%s\n' "$PW" >> "$ELECTRS_CONFIG"; sed -i '/^auth = "/d' "$ELECTRS_CONFIG"
+ELECTRS_PASS=""; reuse_electrs_access; RC=$?
+check $(( RC == 3 ? 0 : 1 )) "an unreadable auth line and no other source: status 3" "status $RC"
+OUT="$(ensure_electrs_access)"; RC=$?
+check $(( RC != 0 ? 0 : 1 )) "that aborts, it does not create a new password"
+no grep -q 'restart bitcoind' "$LOG"; check $? "and bitcoind keeps running"
+node_config
 
 title "40: no rebuild when the right version is installed (P10)"
 BIN="${BOX}/electrs-bin"
@@ -418,7 +592,19 @@ electrs_is_current "$BIN" 0.12;   check $(( $? != 0 ? 0 : 1 )) "0.12 wanted: not
 printf '#!/usr/bin/env bash\necho "electrs 10.12.1"\n' > "$BIN"
 electrs_is_current "$BIN" 0.12.1; check $(( $? != 0 ? 0 : 1 )) "10.12.1 is not 0.12.1"
 electrs_is_current "${BOX}/missing" 0.12.1; check $(( $? != 0 ? 0 : 1 )) "no binary: not current"
-grep -qF -- '--rebuild' "$S40"; check $? "--rebuild forces a build"
+printf '#!/usr/bin/env bash\necho "electrs 0.12.1"\n' > "$BIN"
+need_build "$BIN" 0.12.1 0; check $(( $? != 0 ? 0 : 1 )) "right version installed: no build"
+need_build "$BIN" 0.12.1 1; check $? "right version installed, --rebuild: build"
+need_build "$BIN" 0.12.2 0; check $? "another version wanted: build"
+need_build "${BOX}/missing" 0.12.1 0; check $? "no binary: build"
+REBUILD=0; ( parse_args --rebuild --yes; exit "$REBUILD" ) >/dev/null 2>&1; RC=$?
+check $(( RC == 1 ? 0 : 1 )) "parse_args: --rebuild sets REBUILD" "REBUILD=$RC"
+REBUILD=0; ( parse_args --yes --no-tor; exit "$REBUILD" ) >/dev/null 2>&1; RC=$?
+check $(( RC == 0 ? 0 : 1 )) "parse_args: without --rebuild it stays 0" "REBUILD=$RC"
+( parse_args --new-password; exit "$NEW_PASSWORD" ) >/dev/null 2>&1; RC=$?
+check $(( RC == 1 ? 0 : 1 )) "parse_args: --new-password sets NEW_PASSWORD" "NEW_PASSWORD=$RC"
+( parse_args --nonsense ) >/dev/null 2>&1
+check $(( $? != 0 ? 0 : 1 )) "parse_args: an unknown option stops"
 GATE_LN="$(grep -n 'electrs_is_current' "$S40" | grep -v '^[0-9]*:electrs_is_current()' | head -1 | cut -d: -f1)"
 APT_LN="$(grep -n 'apt-get update' "$S40" | head -1 | cut -d: -f1)"
 [[ -n "$GATE_LN" && -n "$APT_LN" && "$GATE_LN" -lt "$APT_LN" ]]
@@ -497,8 +683,7 @@ title "40: the unit keeps its limits, and a second run changes nothing (P14, P15
 node_config; DB_DIR="$NEW_DB"; ELECTRS_PASS="oldPassw0rd_-x"
 write_electrs_config >/dev/null; write_electrs_unit
 grep -qx 'LimitNOFILE=65536' "$ELECTRS_UNIT"; check $? "LimitNOFILE=65536 is in the generated unit"
-# systemctl show reports the unit as systemd merged it; the stand-in reads our unit file.
-systemctl() { grep -E '^(User|Group|SupplementaryGroups|LimitNOFILE|ReadWritePaths|ReadOnlyPaths)=' "$ELECTRS_UNIT"; }
+rm -f "$DROPINS"/*.conf
 SUM1="$(electrs_state_sum)"
 write_electrs_config >/dev/null; write_electrs_unit
 [[ "$(electrs_state_sum)" == "$SUM1" ]]
@@ -518,12 +703,91 @@ printf 'log_filters = "DEBUG"\n' >> "$ELECTRS_CONFIG"
 sed -i '/^log_filters = "INFO"/d' "$ELECTRS_CONFIG"
 [[ "$(electrs_state_sum)" != "$SUM1" ]]
 check $? "a change in config.toml is"
-unset -f systemctl
-grep -q 'ELECTRS_WAS_ACTIVE' "$S40" && grep -q 'systemctl restart electrs' "$S40"
-check $? "electrs is restarted only if it ran and its files changed"
-TOR_LN="$(grep -n 'TOR_CHANGED' "$S40" | head -1 | cut -d: -f1)"
-[[ -n "$TOR_LN" ]] && no grep -qE '^    systemctl restart tor$' "$S40" && grep -q 'dpkg -s tor' "$S40"
-check $? "tor is restarted only if torrc changed or tor was not running"
+
+title "40: electrs restarts only when what it starts with has changed (P15, N-V2)"
+# The node today: the main unit is the old one, the drop-ins add the paths and
+# the file limit. Writing the new unit must not look like a change.
+rm -f "$DROPINS"/*.conf; : > "$LOG"
+node_config
+DB_DIR="$NEW_DB"; ELECTRS_PASS="oldPassw0rd_-x"
+cat > "$ELECTRS_UNIT" <<EOF
+[Unit]
+Description=Electrum-Server
+[Service]
+User=electrs
+Group=electrs
+SupplementaryGroups=bitcoin
+ExecStart=/usr/local/bin/electrs --conf /etc/electrs/config.toml
+ReadWritePaths=${DEFAULT_DB}
+ReadOnlyPaths=${DATADIR}
+EOF
+printf '[Service]\nLimitNOFILE=65536\n' > "$DROPINS/10-nofile.conf"
+printf '[Service]\nReadWritePaths=%s\n' "$DEFAULT_DB" > "$DROPINS/hardening.conf"
+printf '[Service]\nReadWritePaths=%s\n' "$NEW_DB" > "$DROPINS/index-0.12.conf"
+STATE_BEFORE="$(electrs_state_sum)"
+write_electrs_config >/dev/null; write_electrs_unit
+STATE_AFTER="$(electrs_state_sum)"
+ELECTRS_WAS_ACTIVE=1
+restart_electrs_if_changed >/dev/null
+no grep -q 'restart electrs' "$LOG"
+check $? "the node as it is (drop-ins hardening.conf, index-0.12.conf, 10-nofile.conf): no restart" "$(cat "$LOG")"
+# hardening.conf is what keeps the old path in the merged set; without it the
+# set shrinks, which is a change (a restart that does no harm, but is slow)
+rm "$DROPINS/hardening.conf"
+STATE_AFTER="$(electrs_state_sum)"
+restart_electrs_if_changed >/dev/null
+grep -q 'restart electrs' "$LOG"
+check $? "without hardening.conf the path set changes: restart"
+: > "$LOG"; ELECTRS_WAS_ACTIVE=0
+restart_electrs_if_changed >/dev/null
+no grep -q 'restart electrs' "$LOG"
+check $? "changed, but electrs was not running: no restart"
+ELECTRS_WAS_ACTIVE=1; STATE_BEFORE="$STATE_AFTER"
+restart_electrs_if_changed >/dev/null
+no grep -q 'restart electrs' "$LOG"
+check $? "running and unchanged: no restart"
+STATE_BEFORE=x; STATE_AFTER=y
+restart_electrs_if_changed >/dev/null
+grep -q 'restart electrs' "$LOG"
+check $? "running and changed: restart"
+rm -f "$DROPINS"/*.conf; ELECTRS_WAS_ACTIVE=0
+
+title "40: Tor restarts only if it has to (P15, N-V3)"
+TORRC="${BOX}/torrc"
+printf 'SocksPort 9050\n\n# Electrum server for your wallet\nHiddenServiceDir /var/lib/tor/electrs/\nHiddenServicePort 50001 127.0.0.1:50001\n' > "$TORRC"
+cp "$TORRC" "$BOX/torrc.orig"
+add_onion_to_torrc "$TORRC" 50001; check $(( $? != 0 ? 0 : 1 )) "torrc with the onion service: not changed (status 1)"
+cmp -s "$TORRC" "$BOX/torrc.orig"; check $? "and the file is byte-identical"
+: > "${ACTIVE}/tor"
+tor_needs_restart 0; check $(( $? != 0 ? 0 : 1 )) "torrc unchanged and Tor running: no restart"
+rm -f "${ACTIVE}/tor"
+tor_needs_restart 0; check $? "torrc unchanged but Tor not running: start"
+: > "${ACTIVE}/tor"
+printf 'SocksPort 9050\n' > "$TORRC"
+add_onion_to_torrc "$TORRC" 50002; check $? "torrc without the entry: added (status 0)"
+grep -qx 'HiddenServicePort 50002 127.0.0.1:50002' "$TORRC" && grep -qx 'SocksPort 9050' "$TORRC"
+check $? "the entry carries the port, the rest of torrc stays"
+tor_needs_restart 1; check $? "torrc changed: restart even if Tor runs"
+rm -f "${ACTIVE}/tor"
+
+title "40: the firewall rule is only replaced if it differs (N-B5)"
+ufw() { cat "$BOX/ufw.out"; }
+SUBNET="192.168.7.0/24"
+cat > "$BOX/ufw.out" <<'EOF'
+Status: active
+
+     To                         Action      From
+     --                         ------      ----
+[ 1] 50001/tcp                  ALLOW IN    192.168.7.0/24             # Electrum LAN
+[ 2] 22/tcp                     ALLOW IN    Anywhere
+EOF
+ufw_rule_present "$SUBNET" 50001 'Electrum LAN'; check $? "the rule of the node is recognised"
+ufw_rule_present 192.168.3.0/24 50001 'Electrum LAN'; check $(( $? != 0 ? 0 : 1 )) "another subnet: not the same rule"
+ufw_rule_present "$SUBNET" 50002 'Electrum LAN'; check $(( $? != 0 ? 0 : 1 )) "another port: not the same rule"
+ufw_rule_present 192.168.70.0/24 50001 'Electrum LAN'; check $(( $? != 0 ? 0 : 1 )) "a subnet that only starts the same: not the same rule"
+printf '[ 3] 50001/tcp                  ALLOW IN    192.168.7.0/24             # Electrum LAN\n' >> "$BOX/ufw.out"
+ufw_rule_present "$SUBNET" 50001 'Electrum LAN'; check $(( $? != 0 ? 0 : 1 )) "the rule twice: replaced (so that one is left)"
+unset -f ufw
 
 # ==================================================================== Result =
 printf '\n'
