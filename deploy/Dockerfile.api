@@ -36,8 +36,12 @@ FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c01
 # Logs, the ldconfig cache and the machine-id that systemd's postinst rolls
 # differ on every build; an image should not carry a machine-id anyway.
 # The upgrade pulls Debian security fixes the base image does not have yet.
+# The explicit pam upgrade (CVE-2025-6020) also keeps the build cache from
+# reusing an older upgrade layer.
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends --only-upgrade \
+    libpam-modules libpam-modules-bin libpam-runtime libpam0g \
  && apt-get install -y --no-install-recommends systemd ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
