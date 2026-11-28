@@ -28,10 +28,10 @@ RUN pnpm --filter ./shared build && pnpm --filter ./frontend build
 FROM nginx:1.31-alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606
 # Alpine fixes land before the next nginx image does. apk.log carries the
 # time of the upgrade and would make every build differ. The libxslt
-# and libxml2 floors (CVE-2026-87636, CVE-2026-9947, CVE-2026-86144) also
-# keep the build cache from reusing an older upgrade layer.
+# and libxml2 floors (CVE-2026-87636, CVE-2026-9947, CVE-2026-86144,
+# CVE-2026-11979) also keep the build cache from reusing an older upgrade layer.
 RUN apk upgrade --no-cache \
-    && apk add --no-cache --upgrade "libxslt>=1.1.43-r4" "libxml2>=2.13.9-r3" \
+    && apk add --no-cache --upgrade "libxslt>=1.1.43-r4" "libxml2>=2.13.9-r5" \
     && rm -f /var/log/apk.log
 COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/nginx/default.conf.template deploy/nginx/redirect.conf.template /etc/nginx/templates/
